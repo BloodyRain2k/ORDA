@@ -585,6 +585,7 @@ namespace ORDA
 					GUILayout.BeginHorizontal ();
 					GUILayout.Label ("IDLE", (gncDockState == GNC.DockState.IDLE) ? (sgreen) : (snormal));
 					GUILayout.Label ("ORIENT", (gncDockState == GNC.DockState.ORIENT) ? (sgreen) : (snormal));
+					GUILayout.Label ("EVADE", (gncDockState == GNC.DockState.EVADE) ? (sgreen) : (snormal));
 					GUILayout.Label ("ENTRY", (gncDockState == GNC.DockState.ENTRY) ? (sgreen) : (snormal));
 					GUILayout.Label ("APPROACH", (gncDockState == GNC.DockState.APPROACH) ? (sgreen) : (snormal));
 					GUILayout.Label ("DOCKED", (gncDockState == GNC.DockState.DOCKED) ? (sgreen) : (snormal));
@@ -648,6 +649,7 @@ namespace ORDA
 					GUILayout.Label ("Distance:  " + Util.formatValue (relPos.magnitude, "m", "F2"), slabel);
 					GUILayout.Label ("Approach Speed: " + Util.formatValue (flightData.targetRelVelocityShip.magnitude, "m/s"));
 					GUILayout.Label ("Approach Deviation [°]: " + gnc.dockDeviationAngle.ToString ("F2"));
+					GUILayout.Label ("Radius: " + gnc.radius.ToString("F2") + "m - TargetRadius: " + gnc.targetRadius.ToString("F2") + "m");
 				} else {
 					GUILayout.Label ("Rel. Pos. [m]: " + flightData.targetRelPositionShip.ToString ("F2"));
 					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F2"));

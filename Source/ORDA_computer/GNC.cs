@@ -43,7 +43,7 @@ namespace ORDA
 		public enum PosMode { IDLE=0, ZERO, HOLD, VN, RN, RETREAT };
 		public enum EACMode { IDLE=0, PULSE, RATE, RATE_ATT };
 		public enum DockMode { IDLE=0, ATTITUDE, AUTO };
-		public enum DockState { IDLE=0, ORIENT, ENTRY, APPROACH, DOCKED, DEPART, ABORT };
+		public enum DockState { IDLE=0, ORIENT, ENTRY, APPROACH, DOCKED, DEPART, ABORT, EVADE };
 		public enum DockAbort { UNKNOWN=0, ATTITUDE, DEVIATION, LATCH };
 
 		Command command = Command.OFF;
@@ -280,6 +280,11 @@ namespace ORDA
 				{
 					command = Command.OFF;
 				}
+				else
+				{
+					radius = getRadius(parent.vessel);
+					targetRadius = getRadius(flightData.targetVessel);
+				}
 			}
 		}
 
@@ -344,6 +349,9 @@ namespace ORDA
 			if (command != Command.DOCK)
 				return;
 
+			radius = getRadius(parent.vessel);
+			targetRadius = getRadius(flightData.targetVessel);
+			
 			if (dockMode == m)
 				dockMode = DockMode.IDLE;
 			else
@@ -859,18 +867,25 @@ namespace ORDA
 								float dist = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).magnitude;
 								dockDistance = (dist < 50f ? dist : 50f);
 							}
+							else
+							{
+								dockState = DockState.EVADE;
+							}
 							dockStateTimer = 0;
 						}
 					} else {
 						dockStateTimer = 0;
 					}
 				}
-				else if(dockState == DockState.ENTRY) {
+				else if(dockState == DockState.ENTRY || dockState == DockState.EVADE) {
 
 					// move to entry
 					// rotate the position command by the target dock rotation
 					rposActive = true;
-					rposCommand = targetDockRotation * (dockEntryPoint / 50f) * dockDistance;
+					rposCommand = (dockState == DockState.ENTRY ?
+					               targetDockRotation * (dockEntryPoint / 50f) * dockDistance :
+					               ((flightData.vesselPart.transform.position - flightData.targetPart.transform.position).normalized - flightData.targetPart.transform.forward)
+					               * (radius + targetRadius + 50f));
 					rposTransform = flightData.targetPart.transform;
 					rposOffset = flightData.vesselPart.transform.position - flightData.vessel.ReferenceTransform.position;
 
@@ -886,7 +901,7 @@ namespace ORDA
 					   Util.maxElement(pyrError) < dockPyrTransitionMargin) {
 						dockStateTimer += dt;
 						if(dockStateTimer > dockStateTransitionDelay) {
-							dockState = DockState.APPROACH;
+							dockState = (dockState == DockState.ENTRY ? DockState.APPROACH : DockState.ENTRY);
 							dockStateTimer = 0;
 						}
 					} else {
@@ -1008,6 +1023,29 @@ namespace ORDA
 			}
 
 			return pryVessel;
+		}
+
+		private float getRadius (Vessel vessel)
+		{
+			Vector3d center = new Vector3d();
+			float largestRadius = 0;
+			
+			foreach (Part p in vessel.Parts)
+			{
+				center += p.transform.position;
+			}
+			center /= vessel.Parts.Count;
+			
+			foreach (Part p in vessel.Parts)
+			{
+				float r = (float)Vector3d.Distance(center, p.transform.position) + p.collider.bounds.size.magnitude;
+				if (largestRadius < r)
+				{
+					largestRadius = r;
+				}
+			}
+			
+			return largestRadius;
 		}
 
 		private void controller ()
