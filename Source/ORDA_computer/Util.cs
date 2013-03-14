@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -365,6 +365,11 @@ namespace ORDA
 					FlightGlobals.fetch.SetVesselTarget((ITargetable)pm);
 				}
 			}
+		}
+		
+		static public void setVesselTarget(Vessel v)
+		{
+			FlightGlobals.fetch.SetVesselTarget((ITargetable)v);
 		}
 
 		static public void unsetVesselTarget()

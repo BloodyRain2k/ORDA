@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -8,10 +8,10 @@ namespace ORDA
 	public class GNC
 	{
 		// settings
-		public const float Default_Kp_AngVel = 0.25f;
-		public const float Default_Kp_AngAcc = 10.0f;
-		public const float Default_Kp_Vel = 0.25f;
-		public const float Default_Kp_Acc = 5.0f;
+		public float Default_Kp_AngVel = 0.25f;
+		public float Default_Kp_AngAcc = 2.0f;
+		public float Default_Kp_Vel = 0.25f;
+		public float Default_Kp_Acc = 2.0f;
 
 		public const float Default_eacPulseLength = 0.1f;	// [s]
 		public const float Default_eacPulseLevel = 1.0f;
@@ -27,7 +27,12 @@ namespace ORDA
 		const float dockPosTransitionMargin = 1.0f;			// [m]
 		const float dockPyrTransitionMargin = 2.5f;			// [°]
 
+		float dockDistance = 50f;
+		public float radius = 0;
+		public float targetRadius = 0;
+		
 		// connectivity
+		ORDA_computer parent = null;
 		FlightData flightData = null;
 		Bus bus = null;
 
@@ -61,10 +66,10 @@ namespace ORDA
 		Vector3 userPosSetting = Vector3.zero;
 
 		// ang/lin controller settings
-		float Kp_AngVel = Default_Kp_AngVel;
-		float Kp_AngAcc = Default_Kp_AngAcc;
-		float Kp_Vel = Default_Kp_Vel;
-		float Kp_Acc = Default_Kp_Acc;
+		float Kp_AngVel = 0;
+		float Kp_AngAcc = 0;
+		float Kp_Vel = 0;
+		float Kp_Acc = 0;
 
 		// eac settings & state
 		float eacPulseLength = Default_eacPulseLength;
@@ -118,10 +123,16 @@ namespace ORDA
 		//
 		// public methods
 		//
-		public GNC (FlightData fd, Bus b)
+		public GNC (FlightData fd, Bus b, ORDA_computer p)
 		{
+			parent = p;
 			flightData = fd;
 			bus = b;
+			
+			Kp_AngVel = Default_Kp_AngVel = p.default_Kp_AngVel;
+			Kp_AngAcc = Default_Kp_AngAcc = p.default_Kp_AngAcc;
+			Kp_Vel = Default_Kp_Vel = p.default_Kp_Vel;
+			Kp_Acc = Default_Kp_Acc = p.default_Kp_Acc;
 		}
 
 		public float getPowerFactor ()
@@ -177,6 +188,10 @@ namespace ORDA
 			outEacMode = eacMode;
 			outPosMode = posMode;
 			outDockMode = dockMode;
+		}
+		
+		public Command getCommand() {
+			return command;
 		}
 
 		public void getDockState (out DockState outDockState,
@@ -259,8 +274,13 @@ namespace ORDA
 			if (command != Command.RATE && command != Command.ATT && command != Command.EAC)
 				posMode = PosMode.IDLE;
 
-			if (command == Command.DOCK && flightData.targetVessel == null)
-				command = Command.OFF;
+			if (command == Command.DOCK)
+			{
+				if (flightData.targetVessel == null)
+				{
+					command = Command.OFF;
+				}
+			}
 		}
 
 		public void requestRateMode (RateMode m)
@@ -834,7 +854,11 @@ namespace ORDA
 					if(Util.maxElement(pyrError) < dockPyrTransitionMargin) {
 						dockStateTimer += dt;
 						if(dockStateTimer > dockStateTransitionDelay) {
-							dockState = DockState.ENTRY;
+							if (dockDeviationAngle < 100) {
+								dockState = DockState.ENTRY;
+								float dist = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).magnitude;
+								dockDistance = (dist < 50f ? dist : 50f);
+							}
 							dockStateTimer = 0;
 						}
 					} else {
@@ -846,7 +870,7 @@ namespace ORDA
 					// move to entry
 					// rotate the position command by the target dock rotation
 					rposActive = true;
-					rposCommand = targetDockRotation * dockEntryPoint;
+					rposCommand = targetDockRotation * (dockEntryPoint / 50f) * dockDistance;
 					rposTransform = flightData.targetPart.transform;
 					rposOffset = flightData.vesselPart.transform.position - flightData.vessel.ReferenceTransform.position;
 
@@ -913,7 +937,10 @@ namespace ORDA
 					}
 					else if(dist < 10.0f) {
 						rvelLimit = 0.5f;
-					} else {
+					} else if(dist < 0.85f && rvelLimitMin) {
+						requestCommand(Command.OFF);
+					}
+					else {
 						rvelLimit = 1.0f;
 					}
 				}
@@ -1094,7 +1121,7 @@ namespace ORDA
 				xyzOut.z = Mathf.Clamp (fz / flightData.availableForce.z, -1.0f, +1.0f);
 			}
 		}
-
+		
 		void print(string s)
 		{
 			UnityEngine.Debug.Log("GNC: " + s);

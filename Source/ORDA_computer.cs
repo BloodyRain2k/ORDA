@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 
@@ -16,6 +17,14 @@ namespace ORDA
 		public float maxPowerConsumption = 4;
 		[KSPField]
 		public string resourceName = "ElectricCharge";
+		[KSPField]
+		public float default_Kp_AngVel = 0.25f;
+		[KSPField]
+		public float default_Kp_AngAcc = 2.0f;
+		[KSPField]
+		public float default_Kp_Vel = 0.25f;
+		[KSPField]
+		public float default_Kp_Acc = 2.0f;
 
 		// unit objects
 		VisualHelper visualHelper = null;
@@ -133,7 +142,7 @@ namespace ORDA
 			if (outOfPowerFlag) {
 				GUILayout.Label("Power failure.");
 				if (GUILayout.Button ("Reset", activeStyle)) {
-					windowPositionInvalid = true;
+//					windowPositionInvalid = true;
 					windowSizeInvalid = true;
 					outOfPowerFlag = false;
 				}
@@ -286,7 +295,8 @@ namespace ORDA
 					targetVessel = v;
 					targetDockingPort = null;
 					targetChanged = true;
-					Util.unsetVesselTarget();
+//					Util.unsetVesselTarget();
+					Util.setVesselTarget(v);
 				}
 				GUILayout.EndHorizontal ();
 
@@ -301,7 +311,8 @@ namespace ORDA
 						if (GUILayout.Button ("-", (targetDockingPort == null) ? (activeStyle) : (style))) {
 							targetDockingPort = null;
 							targetChanged = true;
-							Util.unsetVesselTarget();
+//							Util.unsetVesselTarget();
+							Util.setVesselTarget(v);
 						}
 						// select docking ports?
 						num = 1;
@@ -419,11 +430,13 @@ namespace ORDA
 		private void windowAutopilotGUI (GUIStyle style, GUIStyle activeStyle)
 		{
 			// get some styles
+			GUIStyle slabel = new GUIStyle(GUI.skin.label);
 			GUIStyle snormal = new GUIStyle ();
 			GUIStyle sgreen = new GUIStyle ();
 			GUIStyle sred = new GUIStyle ();
 			sgreen.normal.textColor = Color.green;
 			sred.normal.textColor = Color.red;
+			slabel.wordWrap = false;
 
 			// save toggle states
 			bool oldSettingsToggle = settingsToggle;
@@ -534,7 +547,7 @@ namespace ORDA
 			// eac
 			else if (gncCommand == GNC.Command.EAC) {
 				GUILayout.BeginHorizontal ();
-				GUILayout.Label ("Mode: ");
+				GUILayout.Label ("Mode: ", slabel);
 				if (GUILayout.Button ("PULSE", (gncEacMode == GNC.EACMode.PULSE) ? (activeStyle) : (style))) {
 					gnc.requestEacMode (GNC.EACMode.PULSE);
 				}
@@ -554,7 +567,7 @@ namespace ORDA
 				gnc.getDockState (out gncDockState, out gncDockAbort);
 
 				GUILayout.BeginHorizontal ();
-				GUILayout.Label ("Mode: ");
+				GUILayout.Label ("Mode: ", slabel);
 				if (GUILayout.Button ("ATTITUDE", (gncDockMode == GNC.DockMode.ATTITUDE) ? (activeStyle) : (style))) {
 					gnc.requestDockMode (GNC.DockMode.ATTITUDE);
 					windowSizeInvalid = true;
@@ -575,7 +588,7 @@ namespace ORDA
 					GUILayout.Label ("ENTRY", (gncDockState == GNC.DockState.ENTRY) ? (sgreen) : (snormal));
 					GUILayout.Label ("APPROACH", (gncDockState == GNC.DockState.APPROACH) ? (sgreen) : (snormal));
 					GUILayout.Label ("DOCKED", (gncDockState == GNC.DockState.DOCKED) ? (sgreen) : (snormal));
-					GUILayout.Label ("DEPART", (gncDockState == GNC.DockState.DEPART) ? (sgreen) : (snormal));
+//					GUILayout.Label ("DEPART", (gncDockState == GNC.DockState.DEPART) ? (sgreen) : (snormal));
 					GUILayout.EndHorizontal ();
 					if (gncDockState == GNC.DockState.ABORT) {
 						string abortReason = "unknown";
@@ -619,7 +632,7 @@ namespace ORDA
 
 			// target infos
 			if (targetVessel != null) {
-				GUILayout.Label ("Target: '" + targetVessel.vesselName + "'");
+				GUILayout.Label ("Target: '" + targetVessel.vesselName + "'", slabel);
 				if (vesselDockingPort != null && targetDockingPort != null) {
 					Vector3 relPos;
 					float distance;
@@ -629,16 +642,16 @@ namespace ORDA
 					Vector3 relPosInertial = vesselDockingPort.transform.TransformDirection (relPos);
 					Vector3 relPosShip = vessel.ReferenceTransform.InverseTransformDirection (relPosInertial);
 
-					GUILayout.Label ("Rel. Att. [°]: " + gnc.pyrError.ToString ("F3"));
-					GUILayout.Label ("Rel. Pos. [m]: " + relPosShip.ToString ("F3"));
-					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F3"));
-					GUILayout.Label ("Distance: " + Util.formatValue (relPos.magnitude, "m", "F3"));
+					GUILayout.Label ("Rel. Att. [°]: " + gnc.pyrError.ToString ("F2"));
+					GUILayout.Label ("Rel. Pos. [m]: " + relPosShip.ToString ("F2"));
+					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F2"));
+					GUILayout.Label ("Distance:  " + Util.formatValue (relPos.magnitude, "m", "F2"), slabel);
 					GUILayout.Label ("Approach Speed: " + Util.formatValue (flightData.targetRelVelocityShip.magnitude, "m/s"));
-					GUILayout.Label ("Approach Deviation [°]: " + gnc.dockDeviationAngle.ToString ("F3"));
+					GUILayout.Label ("Approach Deviation [°]: " + gnc.dockDeviationAngle.ToString ("F2"));
 				} else {
-					GUILayout.Label ("Rel. Pos. [m]: " + flightData.targetRelPositionShip.ToString ("F3"));
-					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F3"));
-					GUILayout.Label ("Distance: " + Util.formatValue (flightData.targetRelPosition.magnitude, "m", "F3"));
+					GUILayout.Label ("Rel. Pos. [m]: " + flightData.targetRelPositionShip.ToString ("F2"));
+					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F2"));
+					GUILayout.Label ("Distance:  " + Util.formatValue (flightData.targetRelPosition.magnitude, "m", "F2"), slabel);
 				}
 			}
 
@@ -702,7 +715,7 @@ namespace ORDA
 				GUILayout.Label ("Kp_Acc: " + Kp_Acc.ToString ("F3"), GUILayout.Width (fullWindowWidth / 2));
 				Kp_Acc_string = GUILayout.TextField (Kp_Acc_string, GUILayout.ExpandWidth (true));
 				GUILayout.EndHorizontal ();
-
+				
 				GUILayout.BeginHorizontal ();
 				if (GUILayout.Button ("Update", style)) {
 					double d = 0;
@@ -717,10 +730,10 @@ namespace ORDA
 					gnc.setControllerSettings (Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
 				}
 				if (GUILayout.Button ("Reset", style)) {
-					Kp_AngVel = GNC.Default_Kp_AngVel;
-					Kp_AngAcc = GNC.Default_Kp_AngAcc;
-					Kp_Vel = GNC.Default_Kp_Vel;
-					Kp_Acc = GNC.Default_Kp_Acc;
+					Kp_AngVel = gnc.Default_Kp_AngVel;
+					Kp_AngAcc = gnc.Default_Kp_AngAcc;
+					Kp_Vel = gnc.Default_Kp_Vel;
+					Kp_Acc = gnc.Default_Kp_Acc;
 					gnc.setControllerSettings (Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
 					Kp_AngVel_string = null;
 				}
@@ -781,13 +794,13 @@ namespace ORDA
 					GUILayout.BeginHorizontal();
 					GUILayout.Label ("rollAdjust: " + rollAdjust.ToString("F1"), GUILayout.Width (fullWindowWidth / 2));
 					if(GUILayout.Button("+", style)) {
-						rollAdjust = ((int)rollAdjust + 30);
-						if(rollAdjust > 180) rollAdjust = -150;
+						rollAdjust = ((int)rollAdjust + 15);
+						if(rollAdjust > 180) rollAdjust = -165;
 						gnc.setDockSettings(rollAdjust);
 					}
 					if(GUILayout.Button("-", style)) {
-						rollAdjust = ((int)rollAdjust - 30);
-						if(rollAdjust < -180) rollAdjust = 150;
+						rollAdjust = ((int)rollAdjust - 15);
+						if(rollAdjust < -180) rollAdjust = 165;
 						gnc.setDockSettings(rollAdjust);
 					}
 					if(GUILayout.Button("0", style)) {
@@ -969,7 +982,7 @@ namespace ORDA
 			if (gnc == null) {
 				flightData = new FlightData ();
 				bus = new Bus ();
-				gnc = new GNC (flightData, bus);
+				gnc = new GNC (flightData, bus, this);
 			}
 			teleporter = new Teleporter (flightData);
 
@@ -1091,6 +1104,11 @@ namespace ORDA
 			if (!activeSystem) {
 				gnc.requestCommand (GNC.Command.OFF);
 				return;
+			}
+			else {
+				if (gnc.getCommand() != GNC.Command.OFF) {
+					part.vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
+				}
 			}
 
 			// activate rate dampening if detected docking/undocking
@@ -1218,7 +1236,7 @@ namespace ORDA
 					if(gnc == null) {
 						flightData = new FlightData ();
 						bus = new Bus ();
-						gnc = new GNC (flightData, bus);
+						gnc = new GNC (flightData, bus, this);
 					}
 					gnc.restoreConfiguration (gncConfig);
 				} catch (Exception e) {

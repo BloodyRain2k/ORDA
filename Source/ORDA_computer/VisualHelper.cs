@@ -82,7 +82,7 @@ namespace ORDA
 		public void showLineInertial(int line, Vector3 pi)
 		{
 			if(line < 0 || line >= numLines) return;
-			if(transform == null) return;
+			if(transform == null || lines [line] == null) return;
 			checkLines();
 
 			Vector3 ps = transform.InverseTransformDirection (pi);
@@ -91,14 +91,16 @@ namespace ORDA
 
 		public void hideLine(int line)
 		{
-			if(line < 0 || line >= numLines) return;
+			if(line < 0 || line >= numLines || lines [line] == null) return;
 			lines [line].SetPosition (1, Vector3.zero);
 		}
 
 		public void hideLines()
 		{
 			for(int i=0; i<numLines; i++) {
-				lines [i].SetPosition(1, Vector3.zero);
+				if (lines [i] != null) {
+					lines [i].SetPosition (1, Vector3.zero);
+				}
 			}
 		}
 	}
