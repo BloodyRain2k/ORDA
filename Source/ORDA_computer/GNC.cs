@@ -119,6 +119,8 @@ namespace ORDA
 		public Vector3 rposError = Vector3.zero;
 		public Vector3 rvelError = Vector3.zero;
 		public float dockDeviationAngle = 0;
+		
+		private LineRenderer line;
 
 		//
 		// public methods
@@ -133,6 +135,22 @@ namespace ORDA
 			Kp_AngAcc = Default_Kp_AngAcc = p.default_Kp_AngAcc;
 			Kp_Vel = Default_Kp_Vel = p.default_Kp_Vel;
 			Kp_Acc = Default_Kp_Acc = p.default_Kp_Acc;
+			
+//			createLine();
+		}
+		
+		private void createLine()
+		{
+			var obj = new GameObject("Line");
+			line = obj.AddComponent<LineRenderer>();
+//			line.transform.parent = flightData.vessel.transform;
+			line.transform.localPosition = Vector3.zero;
+			line.transform.localEulerAngles = Vector3.zero;
+			line.useWorldSpace = true;
+			line.material = new Material (Shader.Find ("Particles/Additive"));
+			line.SetWidth (0.1f, 0.1f); 
+			line.SetVertexCount (2);
+			line.SetPosition (0, Vector3.zero);
 		}
 
 		public float getPowerFactor ()
@@ -864,7 +882,7 @@ namespace ORDA
 						if(dockStateTimer > dockStateTransitionDelay) {
 							if (dockDeviationAngle < 100) {
 								dockState = DockState.ENTRY;
-								float dist = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).magnitude;
+								float dist = Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position);
 								dockDistance = (dist < 50f ? dist : 50f);
 							}
 							else
@@ -881,11 +899,12 @@ namespace ORDA
 
 					// move to entry
 					// rotate the position command by the target dock rotation
+					Vector3 evadeDir = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).normalized;
+					evadeDir = evadeDir - (flightData.targetPart.transform.up * Vector3.Dot(evadeDir, flightData.targetPart.transform.up));
+					evadeDir *= radius + targetRadius + 50f;
+					
 					rposActive = true;
-					rposCommand = (dockState == DockState.ENTRY ?
-					               targetDockRotation * (dockEntryPoint / 50f) * dockDistance :
-					               ((flightData.vesselPart.transform.position - flightData.targetPart.transform.position).normalized - flightData.targetPart.transform.forward)
-					               * (radius + targetRadius + 50f));
+					rposCommand = (dockState == DockState.ENTRY ? targetDockRotation * (dockEntryPoint / 50f) * dockDistance : evadeDir);
 					rposTransform = flightData.targetPart.transform;
 					rposOffset = flightData.vesselPart.transform.position - flightData.vessel.ReferenceTransform.position;
 
@@ -997,6 +1016,20 @@ namespace ORDA
 					rposActive = true;
 					rposCommand = dockEntryPoint;
 					rposTransform = flightData.targetPart.transform;
+				}
+				
+				if (line == null) { createLine(); }
+				
+				if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
+				{
+					line.SetWidth(0.1f, 0.1f);
+					line.SetPosition(0, flightData.targetPart.transform.position);
+					line.SetPosition(1, flightData.targetPart.transform.position + rposCommand);
+				}
+				else
+				{
+					line.SetWidth(0f, 0f);
+//					line.SetPosition(1, Vector3.zero);
 				}
 			}
 		}
