@@ -139,18 +139,19 @@ namespace ORDA
 //			createLine();
 		}
 		
-		private void createLine()
+		private LineRenderer createLine()
 		{
 			var obj = new GameObject("Line");
-			line = obj.AddComponent<LineRenderer>();
-//			line.transform.parent = flightData.vessel.transform;
-			line.transform.localPosition = Vector3.zero;
-			line.transform.localEulerAngles = Vector3.zero;
-			line.useWorldSpace = true;
-			line.material = new Material (Shader.Find ("Particles/Additive"));
-			line.SetWidth (0.1f, 0.1f); 
-			line.SetVertexCount (2);
-			line.SetPosition (0, Vector3.zero);
+			var l = obj.AddComponent<LineRenderer>();
+//			l.transform.parent = flightData.vessel.transform;
+			l.transform.localPosition = Vector3.zero;
+			l.transform.localEulerAngles = Vector3.zero;
+			l.useWorldSpace = true;
+			l.material = new Material (Shader.Find ("Particles/Additive"));
+			l.SetWidth (0.1f, 0.1f); 
+			l.SetVertexCount (2);
+			l.SetPosition (0, Vector3.zero);
+			return l;
 		}
 
 		public float getPowerFactor ()
@@ -1018,19 +1019,19 @@ namespace ORDA
 					rposTransform = flightData.targetPart.transform;
 				}
 				
-				if (line == null) { createLine(); }
-				
-				if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
-				{
-					line.SetWidth(0.1f, 0.1f);
-					line.SetPosition(0, flightData.targetPart.transform.position);
-					line.SetPosition(1, flightData.targetPart.transform.position + rposCommand);
-				}
-				else
-				{
-					line.SetWidth(0f, 0f);
-//					line.SetPosition(1, Vector3.zero);
-				}
+//				if (line == null) { line = createLine(); }
+//				
+//				if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
+//				{
+//					line.SetWidth(0.1f, 0.1f);
+//					line.SetPosition(0, flightData.targetPart.transform.position);
+//					line.SetPosition(1, flightData.targetPart.transform.position + rposCommand);
+//				}
+//				else
+//				{
+//					line.SetWidth(0f, 0f);
+////					line.SetPosition(1, Vector3.zero);
+//				}
 			}
 		}
 
