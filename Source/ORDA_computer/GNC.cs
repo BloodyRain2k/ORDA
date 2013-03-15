@@ -856,8 +856,7 @@ namespace ORDA
 						if(dockStateTimer > dockStateTransitionDelay) {
 							if (dockDeviationAngle < 100) {
 								dockState = DockState.ENTRY;
-								float dist = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).magnitude;
-								dockDistance = (dist < 50f ? dist : 50f);
+								dockDistance = Mathf.Clamp(Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position), 5f, 50f);
 							}
 							dockStateTimer = 0;
 						}
@@ -937,7 +936,7 @@ namespace ORDA
 					}
 					else if(dist < 10.0f) {
 						rvelLimit = 0.5f;
-					} else if(dist < 0.85f && rvelLimitMin) {
+					} else if(dist < 0.95f && rvelLimitMin) {
 						requestCommand(Command.OFF);
 					}
 					else {
