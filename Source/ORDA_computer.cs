@@ -965,7 +965,7 @@ namespace ORDA
 		{
 			currentPage = config.currentPage;
 			windowIsMinimized = config.windowIsMinimized;
-			windowPositionInvalid = true;
+			//windowPositionInvalid = true;
 			windowSizeInvalid = true;
 			// save other stuff too?
 		}
@@ -1123,7 +1123,7 @@ namespace ORDA
 				gnc.requestRateMode (GNC.RateMode.ZERO);
 				print ("reset to rate dampening");*/
 
-				windowSizeInvalid = true;
+//				windowSizeInvalid = true;
 				targetVessel = null;
 				targetDockingPort = null;
 				vesselDockingPort = null;
