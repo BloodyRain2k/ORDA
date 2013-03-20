@@ -120,7 +120,7 @@ namespace ORDA
 		public Vector3 rvelError = Vector3.zero;
 		public float dockDeviationAngle = 0;
 		
-		private LineRenderer line;
+		private Dictionary<string, LineRenderer> lines = new Dictionary<string, LineRenderer>();
 
 		//
 		// public methods
@@ -139,11 +139,11 @@ namespace ORDA
 //			createLine();
 		}
 		
-		private LineRenderer createLine()
+		private LineRenderer createLine(Transform p = null)
 		{
 			var obj = new GameObject("Line");
 			var l = obj.AddComponent<LineRenderer>();
-			l.transform.parent = flightData.targetPart.transform;
+			l.transform.parent = (p != null ? p : flightData.targetPart.transform);
 			l.transform.localPosition = Vector3.zero;
 			l.transform.localEulerAngles = Vector3.zero;
 			l.useWorldSpace = false;
@@ -836,6 +836,23 @@ namespace ORDA
 			// calculate the dock attitude based on the two docking ports
 			Quaternion dockAttitude = getDockAttitude();
 
+			if (!lines.ContainsKey("evade")) {
+				lines.Add("evade", createLine());
+				lines["evade"].SetColors(Color.yellow, Color.yellow);
+				lines["evade"].SetWidth(0.1f, 0.01f);
+			}
+			if (!lines.ContainsKey("target")) {
+				lines.Add("target", createLine());
+				lines["target"].SetColors(Color.red, Color.red);
+				lines["target"].SetWidth(0.1f, 0.01f);
+			}
+			if (!lines.ContainsKey("dir")) {
+				lines.Add("dir", createLine());
+				lines["dir"].SetColors(Color.green, Color.green);
+				lines["dir"].SetWidth(0.1f, 0.01f);
+			}
+				
+
 			// nominal (no rotation) dock attitude
 			Vector3 forward = new Vector3(0, 1, 0);
 			Vector3 up = new Vector3(0, 0, 1);
@@ -899,10 +916,12 @@ namespace ORDA
 
 					// move to entry
 					// rotate the position command by the target dock rotation
-					Vector3 evadeDir = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).normalized;
-					evadeDir = evadeDir - (flightData.targetPart.transform.up * Vector3.Dot(evadeDir, flightData.targetPart.transform.up));
+					Vector3 targetDir = flightData.targetPart.transform.worldToLocalMatrix.MultiplyPoint(flightData.targetPart.transform.position - flightData.vesselPart.transform.position).normalized;
+//					Vector3 targetDir = flightData.targetPart.transform.worldToLocalMatrix.MultiplyPoint(flightData.vesselPart.transform.position - flightData.targetPart.transform.position).normalized;
+					Vector3 targetUp = targetDockRotation * flightData.targetPart.transform.up * Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position);
+					Vector3 evadeDir = targetDir - (targetUp * Vector3.Dot(targetDir, targetUp));
 					evadeDir = evadeDir.normalized * (radius + targetRadius + 25f);
-					
+
 					if (dockState == DockState.EVADE)
 					{
 						dockDistance = -1f;
@@ -916,6 +935,10 @@ namespace ORDA
 					rposCommand = (dockState == DockState.ENTRY ? targetDockRotation * (dockEntryPoint / 50f) * dockDistance : evadeDir);
 					rposTransform = flightData.targetPart.transform;
 					rposOffset = flightData.vesselPart.transform.position - flightData.vessel.ReferenceTransform.position;
+					
+					lines["evade"].SetPosition(1, rposCommand);
+					lines["target"].SetPosition(1, targetUp);
+					lines["dir"].SetPosition(1, targetDir.normalized * 10f);
 
 					// maintain alignment
 					attActive = true;
@@ -1027,17 +1050,15 @@ namespace ORDA
 					rposTransform = flightData.targetPart.transform;
 				}
 				
-				
-				if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
-				{
-					if (line == null) { line = createLine(); }
+			}
+			
+			if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
+			{
 //					line.transform.parent = flightData.targetPart.transform;
-					line.SetPosition(1, rposCommand);
-				}
-				else
-				{
-					line = null;
-				}
+			}
+			else
+			{
+				lines.Clear();
 			}
 		}
 
