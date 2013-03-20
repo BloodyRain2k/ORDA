@@ -143,10 +143,10 @@ namespace ORDA
 		{
 			var obj = new GameObject("Line");
 			var l = obj.AddComponent<LineRenderer>();
-//			l.transform.parent = flightData.vessel.transform;
+			l.transform.parent = flightData.targetPart.transform;
 			l.transform.localPosition = Vector3.zero;
 			l.transform.localEulerAngles = Vector3.zero;
-			l.useWorldSpace = true;
+			l.useWorldSpace = false;
 			l.material = new Material (Shader.Find ("Particles/Additive"));
 			l.SetWidth (0.1f, 0.1f); 
 			l.SetVertexCount (2);
@@ -876,6 +876,7 @@ namespace ORDA
 					attCommand = forward;
 					attUpCommand = up;
 					attTransform = flightData.vesselPart.transform;
+					dockDistance = -1;
 
 					// next state?
 					if(Util.maxElement(pyrError) < dockPyrTransitionMargin) {
@@ -883,7 +884,6 @@ namespace ORDA
 						if(dockStateTimer > dockStateTransitionDelay) {
 							if (dockDeviationAngle < 100) {
 								dockState = DockState.ENTRY;
-								dockDistance = Mathf.Clamp(Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position), 5f, 50f);
 							}
 							else
 							{
@@ -901,7 +901,16 @@ namespace ORDA
 					// rotate the position command by the target dock rotation
 					Vector3 evadeDir = (flightData.vesselPart.transform.position - flightData.targetPart.transform.position).normalized;
 					evadeDir = evadeDir - (flightData.targetPart.transform.up * Vector3.Dot(evadeDir, flightData.targetPart.transform.up));
-					evadeDir *= radius + targetRadius + 50f;
+					evadeDir = evadeDir.normalized * (radius + targetRadius + 25f);
+					
+					if (dockState == DockState.EVADE)
+					{
+						dockDistance = -1f;
+					}
+					else if (dockState == DockState.ENTRY && dockDistance == -1f)
+					{
+						dockDistance = Mathf.Clamp(Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position), 5f, 50f);
+					}
 					
 					rposActive = true;
 					rposCommand = (dockState == DockState.ENTRY ? targetDockRotation * (dockEntryPoint / 50f) * dockDistance : evadeDir);
@@ -916,8 +925,8 @@ namespace ORDA
 					attTransform = flightData.vesselPart.transform;
 
 					// next state?
-					if(Util.maxElement(rposError) < dockPosTransitionMargin && 
-					   Util.maxElement(pyrError) < dockPyrTransitionMargin) {
+					if((Util.maxElement(rposError) < dockPosTransitionMargin && Util.maxElement(pyrError) < dockPyrTransitionMargin)
+					   || (dockDeviationAngle < 90 && dockState == DockState.EVADE)) {
 						dockStateTimer += dt;
 						if(dockStateTimer > dockStateTransitionDelay) {
 							dockState = (dockState == DockState.ENTRY ? DockState.APPROACH : DockState.ENTRY);
@@ -1018,19 +1027,17 @@ namespace ORDA
 					rposTransform = flightData.targetPart.transform;
 				}
 				
-//				if (line == null) { line = createLine(); }
-//				
-//				if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
-//				{
-//					line.SetWidth(0.1f, 0.1f);
-//					line.SetPosition(0, flightData.targetPart.transform.position);
-//					line.SetPosition(1, flightData.targetPart.transform.position + rposCommand);
-//				}
-//				else
-//				{
-//					line.SetWidth(0f, 0f);
-////					line.SetPosition(1, Vector3.zero);
-//				}
+				
+				if (dockState == DockState.EVADE || dockState == DockState.ENTRY)
+				{
+					if (line == null) { line = createLine(); }
+//					line.transform.parent = flightData.targetPart.transform;
+					line.SetPosition(1, rposCommand);
+				}
+				else
+				{
+					line = null;
+				}
 			}
 		}
 
