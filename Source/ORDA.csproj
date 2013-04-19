@@ -72,6 +72,10 @@
       <HintPath>..\..\..\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\..\..\KSP_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="System">
       <HintPath>..\..\..\KSP_Data\Managed\System.dll</HintPath>
       <Private>False</Private>
@@ -89,4 +93,7 @@
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.Targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy /y "$(TargetPath)" "..\..\..\Plugins"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

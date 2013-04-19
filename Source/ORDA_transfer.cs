@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using UnityEngine; 
+using UnityEngine;
 
 namespace ORDA
 {
@@ -16,10 +17,7 @@ namespace ORDA
 		public float maxLineLength;
 
 		// resources
-		string[] knownResources = { "LiquidFuel",
-									"Oxidizer",
-									"MonoPropellant",
-									"ElectricCharge" };
+		List<string> knownResources = new List<string>();
 
 		// gui
 		static int nextWindowId = windowsIDs.transfer;
@@ -92,7 +90,7 @@ namespace ORDA
 
 			GUILayout.EndHorizontal ();
 
-			for (int i=0; i<knownResources.Length; i++) {
+			for (int i=0; i<knownResources.Count; i++) {
 				if(GUILayout.Toggle (i==selectedResource, knownResources[i], GUILayout.ExpandWidth (true))) {
 					if(selectedResource != i) {
 						transferToFlag = false;
@@ -361,6 +359,10 @@ namespace ORDA
 
 		public override void OnFixedUpdate ()
 		{
+			if (knownResources.Count == 0 && ResourceDisplay.Instance != null) {
+				ResourceDisplay.Instance.resourceItems.ForEach(rI => knownResources.Add(rI.nameText.Text));
+			}
+
 			float dt = TimeWarp.fixedDeltaTime;
 			string resourceName = knownResources[selectedResource];
 

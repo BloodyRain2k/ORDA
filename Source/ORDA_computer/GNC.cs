@@ -161,7 +161,7 @@ namespace ORDA
 					p = 0.75f;
 					break;
 				case DockMode.AUTO:
-					p = 1.0f;
+					p = (dockState == DockState.IDLE ? 0.1f : 1.0f);
 					break;
 				}
 				break;
@@ -854,7 +854,7 @@ namespace ORDA
 					if(Util.maxElement(pyrError) < dockPyrTransitionMargin) {
 						dockStateTimer += dt;
 						if(dockStateTimer > dockStateTransitionDelay) {
-							if (dockDeviationAngle < 100) {
+							if (dockDeviationAngle < 120) {
 								dockState = DockState.ENTRY;
 								dockDistance = Mathf.Clamp(Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position), 5f, 50f);
 							}
