@@ -8,10 +8,10 @@ namespace ORDA
 	public class GNC
 	{
 		// settings
-		public float Default_Kp_AngVel = 0.25f;
-		public float Default_Kp_AngAcc = 0.25f;
-		public float Default_Kp_Vel = 1.0f;
-		public float Default_Kp_Acc = 1.0f;
+		public float Default_Kp_AngVel = 30f;
+		public float Default_Kp_AngAcc = 0.2f;
+		public float Default_Kp_Vel = 10f;
+		public float Default_Kp_Acc = 0.2f;
 
 		public const float Default_eacPulseLength = 0.1f;	// [s]
 		public const float Default_eacPulseLevel = 1.0f;
@@ -21,7 +21,7 @@ namespace ORDA
 		public const float dockAbortDeviation = 5.0f;		// [°]
 		public const float dockAbortLatchMiss = 0.3f;		// [m]
 
-		const float positionModeDistance = 50.0f;
+		const double positionModeDistance = 50.0f;
 		Vector3 dockEntryPoint = new Vector3(0, 50, 0);
 		const float dockStateTransitionDelay = 2.5f;
 		const float dockPosTransitionMargin = 1.0f;			// [m]
@@ -38,7 +38,7 @@ namespace ORDA
 
 		// states
 		public enum Command { OFF=0, RATE, ATT, EAC, DOCK };
-		public enum RateMode { IDLE=0, ZERO, ROLL, HOLD };
+		public enum RateMode { IDLE=0, ZERO, ROLL, HOLD, TEST };
 		public enum AttMode { IDLE=0, REF, HOLD, VP, VN, NP, NN, RP, RN, RPP, RPN, RVP, RVN };
 		public enum PosMode { IDLE=0, ZERO, HOLD, VN, RN, RETREAT };
 		public enum EACMode { IDLE=0, PULSE, RATE, RATE_ATT };
@@ -63,7 +63,9 @@ namespace ORDA
 		Vector3 userRateSetting = Vector3.zero;
 		Vector3 userAttSetting = Vector3.zero;
 		Vector3 userAttUpSetting = Vector3.zero;
-		Vector3 userPosSetting = Vector3.zero;
+		Vector3d userPosSetting = Vector3.zero;
+
+        float delaT = 0;
 
 		// ang/lin controller settings
 		float Kp_AngVel = 0;
@@ -99,11 +101,11 @@ namespace ORDA
 		Transform attTransform = null;
 		Vector3 avelCommand = Vector3.zero;
 		Vector3 aaccCommand = Vector3.zero;
-		Vector3 rposCommand = Vector3.zero;
-		Vector3 rposOffset = Vector3.zero;
+		Vector3d rposCommand = Vector3.zero;
+		Vector3d rposOffset = Vector3.zero;
 		Transform rposTransform = null;
-		Vector3 rvelCommand = Vector3.zero;
-		float rvelLimit = 0;
+		Vector3d rvelCommand = Vector3.zero;
+		double rvelLimit = 0;
 		Vector3 accCommand = Vector3.zero;
 
 		// controller outputs
@@ -116,9 +118,23 @@ namespace ORDA
 		public Vector3 attError = Vector3.zero;
 		public Vector3 pyrError = Vector3.zero;
 		public Vector3 avelError = Vector3.zero;
-		public Vector3 rposError = Vector3.zero;
+		public Vector3d rposError = Vector3.zero;
 		public Vector3 rvelError = Vector3.zero;
 		public float dockDeviationAngle = 0;
+
+        private Vector3 smoothAngularVelocity = Vector3.zero;
+        private Vector3 smoothVelocity = Vector3.zero;
+
+        /*
+        public PIDControllerV attPid;
+        public PIDControllerV avelPid;
+        public PIDControllerV rvelPid;
+        public PIDControllerV rposPid;
+        */
+
+
+        float testChono = 0f;
+        Boolean testing = false;
 
 		//
 		// public methods
@@ -133,6 +149,14 @@ namespace ORDA
 			Kp_AngAcc = Default_Kp_AngAcc = p.default_Kp_AngAcc;
 			Kp_Vel = Default_Kp_Vel = p.default_Kp_Vel;
 			Kp_Acc = Default_Kp_Acc = p.default_Kp_Acc;
+
+            
+            /*
+            avelPid = new PIDControllerV(Kp_AngAcc, 0, 0, 1, -1, "avelPid");
+            attPid  = new PIDControllerV(1, 0, 0, double.MaxValue, double.MinValue, "attPid");
+            rvelPid = new PIDControllerV(Kp_Acc, 0, 0, 1, -1, "rvelPid");
+            rposPid = new PIDControllerV(1, 0, 0, double.MaxValue, double.MinValue, "rposPid");
+            */
 		}
 
 		public float getPowerFactor ()
@@ -161,7 +185,7 @@ namespace ORDA
 					p = 0.75f;
 					break;
 				case DockMode.AUTO:
-					p = (dockState == DockState.IDLE ? 0.1f : 1.0f);
+					p = 1.0f;
 					break;
 				}
 				break;
@@ -202,8 +226,8 @@ namespace ORDA
 		}
 
 		public void getControllerSettings (out float outAngVel,
-		                                   out float outAngAcc, 
-		                                   out float outVel, 
+		                                   out float outAngAcc,
+		                                   out float outVel,
 		                                   out float outAcc)
 		{
 			outAngVel = Kp_AngVel;
@@ -217,11 +241,12 @@ namespace ORDA
 		                                   float vel,
 		                                   float acc)
 		{
-			Kp_AngVel = angVel;
-			Kp_AngAcc = angAcc;
-			Kp_Vel = vel;
-			Kp_Acc = acc;
-		}
+            Kp_AngVel = angVel;
+            Kp_AngAcc = angAcc;
+            Kp_Vel = vel;
+            Kp_Acc = acc;
+            
+        }
 
 		public void getEACSettings (out float outPulseLength,
 		                            out float outPulseLevel,
@@ -393,7 +418,7 @@ namespace ORDA
 			config.userRateSetting = new sVector3(userRateSetting);
 			config.userAttSetting = new sVector3(userAttSetting);
 			config.userAttUpSetting = new sVector3(userAttUpSetting);
-			config.userPosSetting = new sVector3(userPosSetting);
+			config.userPosSetting = new sVector3d(userPosSetting);
 			config.Kp_AngVel = Kp_AngVel;
 			config.Kp_AngAcc = Kp_AngAcc;
 			config.Kp_Vel = Kp_Vel;
@@ -439,6 +464,8 @@ namespace ORDA
 		public void update (float dt)
 		{
 			Vessel vessel = flightData.vessel;
+
+            delaT = dt;
 
 			// check states
 			checkStates ();
@@ -568,12 +595,57 @@ namespace ORDA
 			case RateMode.HOLD:
 				avelCommand = userRateSetting;
 				break;
+            case RateMode.TEST:
+                avelActive = false;
+                float testLength = Kp_Vel;
+                if (!testing)
+                {                    
+                        testChono = 0f;
+                        testing = true;                 
+                }
+                else
+                {
+                    if (testChono < testLength)
+                    {
+                        testChono += TimeWarp.deltaTime;
+                        print(testChono.ToString("F2"));
+                    }
+                    else
+                    {
+                        testing = false;
+                        rateMode = RateMode.IDLE;
+
+                        print("Test End : " + flightData.angularVelocity.ToString("F3"));
+                        print("Expected : " + (flightData.availableAngAcc * testLength).ToString("F3"));
+                        print("Calc Moi : " + new Vector3(flightData.availableTorque.x / flightData.angularVelocity.x,
+                            flightData.availableTorque.y / flightData.angularVelocity.y,
+                            flightData.availableTorque.z / flightData.angularVelocity.z) * testLength );
+                        print("MoI" + flightData.MoI.ToString("F3"));
+                        print("MoI0" + flightData.MoI0.ToString("F3"));
+                        print("MoI1" + flightData.MoI1.ToString("F3"));
+                        print("MoI2" + flightData.MoI2.ToString("F3"));
+                        print("MoI3" + flightData.MoI3.ToString("F3"));
+
+
+                        /*
+                        print("Test End : " + flightData.targetRelVelocityShip.ToString("F3"));
+                        print("Expected : " + (flightData.availableLinAcc* 10f).ToString("F3"));
+                        print("Calc Mass : " + new Vector3(
+                            flightData.availableForce.x / flightData.targetRelVelocityShip.x,
+                            flightData.availableForce.y / flightData.targetRelVelocityShip.y,
+                            flightData.availableForce.z / flightData.targetRelVelocityShip.z) * 10);
+                        print("Mass : " + flightData.mass);
+                         */
+                    }
+
+                }
+                break;
 			default:
 				avelActive = false;
 				break;
 			}
 
-			float distance = rposError.magnitude;
+			double distance = rposError.magnitude;
 			if (distance < 100) {
 				rvelLimitMax = true;
 				rvelLimit = 1.0f;
@@ -745,7 +817,7 @@ namespace ORDA
 			if (rposActive) {
 				// limit to save some rcs fuel
 				rvelLimitMax = true;
-				float dist = rposError.magnitude;
+				double dist = rposError.magnitude;
 				if (dist < 100) {
 					rvelLimit = 1.0f;
 				} else {
@@ -851,6 +923,7 @@ namespace ORDA
 					attTransform = flightData.vesselPart.transform;
 
 					// next state?
+                    //print("err=" + Util.maxElement(pyrError) + " dt=" + dt + " dockStateTimer=" + dockStateTimer);
 					if(Util.maxElement(pyrError) < dockPyrTransitionMargin) {
 						dockStateTimer += dt;
 						if(dockStateTimer > dockStateTransitionDelay) {
@@ -927,7 +1000,7 @@ namespace ORDA
 
 					// limit approach velocity
 					rvelLimitMax = true;
-					float dist = rposError.magnitude;
+					double dist = rposError.magnitude;
 					if(dist < 2.5f) {
 						rvelLimitMin = true;
 						rvelLimit = 0.1f;
@@ -1023,105 +1096,179 @@ namespace ORDA
 			rposError = Vector3.zero;
 			rvelError = Vector3.zero;
 
+
+            if (testing)
+            {
+                yprDriven = true;
+
+                if (Kp_AngVel == 1)
+                    yprOut.x = 1;
+                else if (Kp_AngVel == 2)
+                    yprOut.y = 1;
+                else if (Kp_AngVel == 3)
+                    yprOut.z = 1;
+
+                //xyzDriven = true;
+                //xyzOut.x = 1f;
+
+            }
+
+            //print(flightData.vessel.acceleration.ToString());
+
 			if (attActive && attTransform != null) {
 
 				// get commanded direction in local axis
 				Vector3 error = attTransform.InverseTransformDirection(attCommand);
 				attError = error;
-				
+
 				// get the pitch, roll, yaw errors in the vessel frame
-				Vector3 pyrErr = getPitchRollYawError();
+                Vector3 pyrErr = getPitchRollYawError() - (TimeWarp.fixedDeltaTime * flightData.angularVelocity);                
 				pyrError = pyrErr * Mathf.Rad2Deg;
 
 				float p = pyrErr[0];
 				float r = pyrErr[1];
 				float y = pyrErr[2];
+                
+                float absp = Mathf.Abs(p);
+                float absr = Mathf.Abs(r);
+                float absy = Mathf.Abs(y);
 
-				// don't command rotations along the roll axis
-				// if the pitch or yaw errors are too large
-				if (Mathf.Abs(p) * Mathf.Rad2Deg > 10 ||
-					Mathf.Abs(y) * Mathf.Rad2Deg > 10) {
-					r = 0;
-				}
-
-				float ps = (p < 0) ? (-1) : (1);
-				float rs = (r < 0) ? (-1) : (1);
-				float ys = (y < 0) ? (-1) : (1);
-
-				// w = sqrt( 2 * phi * (dw/dt) )
 				avelActive = true;
-				Vector3 angAcc = flightData.availableAngAcc;
-				avelCommand.x = ps * Mathf.Sqrt (2 * Mathf.Abs (p) * angAcc.x) * Kp_AngVel;
-				avelCommand.y = rs * Mathf.Sqrt (2 * Mathf.Abs (r) * angAcc.y) * Kp_AngVel;
-				avelCommand.z = ys * Mathf.Sqrt (2 * Mathf.Abs (y) * angAcc.z) * Kp_AngVel;
+				Vector3 angAcc = flightData.availableAngAcc / 2 ;
+
+                // Maximum allowed angular velocity
+                float maxAngVelocity = Kp_AngVel * Mathf.Deg2Rad;
+
+                Vector3d adj = new Vector3d(
+                    Mathf.Sign(p) * Mathf.Min(Mathf.Sqrt(2f * absp * angAcc.x) * 0.5f, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity),
+                    Mathf.Sign(r) * Mathf.Min(Mathf.Sqrt(2f * absr * angAcc.y) * 0.5f, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity),
+                    Mathf.Sign(y) * Mathf.Min(Mathf.Sqrt(2f * absy * angAcc.z) * 0.5f, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity)
+                    );
+
+                //adj = attPid.Compute(adj);
+                const float precision = 0.0005f;
+                avelCommand.x = absp > precision ? (float)adj.x : 0;
+                avelCommand.y = absr > precision ? (float)adj.y : 0;
+                avelCommand.z = absy > precision ? (float)adj.z : 0;
+
+
 			}
 
 			if (avelActive) {
 				Vector3 error = avelCommand - flightData.angularVelocity;
-				avelError = error;
-				aaccCommand = -error * Kp_AngAcc;
+                avelError = error;
+                aaccCommand = -error;
 
-				// T = I * (dw/dt)
-				float Tp = flightData.MoI.x * aaccCommand.x;
-				float Tr = flightData.MoI.y * aaccCommand.y;
-				float Ty = flightData.MoI.z * aaccCommand.z;
+                Vector3 angAcc = flightData.availableAngAcc / 2;
 
-				yprDriven = true;
-				yprOut.x = Mathf.Clamp (Ty / flightData.availableTorque.z, -1.0f, +1.0f);
-				yprOut.y = Mathf.Clamp (Tp / flightData.availableTorque.x, -1.0f, +1.0f);
-				yprOut.z = Mathf.Clamp (Tr / flightData.availableTorque.y, -1.0f, +1.0f);
-			}
+                Vector3d adj = new Vector3d(
+                    aaccCommand.z / (angAcc.z * TimeWarp.fixedDeltaTime * flightData.maxRCSDist),
+                    aaccCommand.x / (angAcc.x * TimeWarp.fixedDeltaTime * flightData.maxRCSDist),
+                    aaccCommand.y / (angAcc.y * TimeWarp.fixedDeltaTime * flightData.maxRCSDist)
+                    );
+
+                //adj = avelPid.Compute(adj);
+
+                //print(flightData.MoIRatio.ToString("F3"));
+
+                yprDriven = true;
+                yprOut.x = Mathf.Clamp((float)adj.x * Kp_AngAcc, -0.5f, +0.5f);
+                yprOut.y = Mathf.Clamp((float)adj.y * Kp_AngAcc, -0.5f, +0.5f);
+                yprOut.z = Mathf.Clamp((float)adj.z * Kp_AngAcc, -0.5f, +0.5f);    
+
+
+               //print(aaccCommand.ToString("F3") + " " + Adj.ToString("F3") + " " + yprOut.ToString("F3"));
+
+            }
 
 			if (rposActive && rposTransform != null) {
-				Vector3 commandPos = rposTransform.TransformPoint(rposCommand);
-				Vector3 vesselPos = flightData.vessel.ReferenceTransform.position;
-				Vector3 error = vesselPos - commandPos + rposOffset;
+				Vector3d commandPos = rposTransform.TransformPoint(rposCommand);
+				Vector3d vesselPos = flightData.vessel.ReferenceTransform.position;
+                Vector3d error = vesselPos - commandPos + rposOffset - TimeWarp.fixedDeltaTime * flightData.targetRelVelocity ;
 				rposError = error;
 
 				// transform the error into the vessel frame
-				Vector3 shipFrameError = flightData.vessel.ReferenceTransform.InverseTransformDirection (error);
-				float dx = shipFrameError.x;
-				float dy = shipFrameError.y;
-				float dz = shipFrameError.z;
-				float absx = Mathf.Abs (dx);
-				float absy = Mathf.Abs (dy);
-				float absz = Mathf.Abs (dz);
-				float sx = (dx > 0) ? (1) : (-1);
-				float sy = (dy > 0) ? (1) : (-1);
-				float sz = (dz > 0) ? (1) : (-1);
+				Vector3d shipFrameError = flightData.vessel.ReferenceTransform.InverseTransformDirection (error);
+                
+                double dx = shipFrameError.x;
+                double dy = shipFrameError.y;
+                double dz = shipFrameError.z;
 
-				// v = sqrt( 2 * error * a )
-				rvelActive = true;
-				Vector3 linAcc = flightData.availableLinAcc;
-				rvelCommand.x = sx * Mathf.Sqrt (2 * absx * linAcc.x) * Kp_Vel;
-				rvelCommand.y = sy * Mathf.Sqrt (2 * absy * linAcc.y) * Kp_Vel;
-				rvelCommand.z = sz * Mathf.Sqrt (2 * absz * linAcc.z) * Kp_Vel;
+                double absx = Math.Abs(dx);
+                double absy = Math.Abs(dy);
+                double absz = Math.Abs(dz);
 
-				// limit?
+                rvelActive = true;
+				Vector3 linAcc = flightData.availableLinAcc / 2;
+
+                // Maximum allowed speed                
+                float maxVelocity = Kp_Vel;
+
+                Vector3d adj = new Vector3d(
+                    Math.Sign(dx) * Math.Min(Math.Sqrt(2 * linAcc.x * absx) * 0.5, maxVelocity),
+                    Math.Sign(dy) * Math.Min(Math.Sqrt(2 * linAcc.y * absy) * 0.5, maxVelocity),
+                    Math.Sign(dz) * Math.Min(Math.Sqrt(2 * linAcc.z * absz) * 0.5, maxVelocity)
+                    );
+
+                rvelCommand.x = absx > 0.01 ? (float)adj.x : 0;
+                rvelCommand.y = absy > 0.01 ? (float)adj.y : 0;
+                rvelCommand.z = absz > 0.01 ? (float)adj.z : 0;
+                 
+                //print("d=" + shipFrameError.ToString() + " Cv= "  +  rvelCommand.ToString() + " dV=" + flightData.targetRelVelocityShip.ToString());
+
+                /*
+                // limit?
 				float mag = rvelCommand.magnitude;
 				Vector3 n = rvelCommand.normalized;
 				if ((rvelLimitMax && mag > rvelLimit) || (rvelLimitMin && mag < rvelLimit)) {
 					rvelCommand = n * rvelLimit;
 				}
+                 */
 			}
 
 			if (rvelActive) {
 				Vector3 error = rvelCommand - flightData.targetRelVelocityShip;
-				rvelError = error;
-				accCommand = error * Kp_Acc;
+                rvelError = error;
+				accCommand = error;
+                /*
+               // Should reset this less often ...
+               smoothVelocity = Vector3.zero;
 
-				// F = m * a
-				float fx = flightData.mass * accCommand.x;
-				float fy = flightData.mass * accCommand.y;
-				float fz = flightData.mass * accCommand.z;
+               // Ignore under 0.01m/s
+               const float accPrecision = 0.001f;
+               
+               Vector3 Adj = new Vector3(
+                   Mathf.SmoothDamp(Mathf.Abs(accCommand.x) <= accPrecision ? 0f : accCommand.x, 0, ref smoothVelocity.x, 2f * TimeWarp.fixedDeltaTime, flightData.availableLinAcc.x, TimeWarp.fixedDeltaTime),
+                   Mathf.SmoothDamp(Mathf.Abs(accCommand.y) <= accPrecision ? 0f : accCommand.y, 0, ref smoothVelocity.y, 2f * TimeWarp.fixedDeltaTime, flightData.availableLinAcc.y, TimeWarp.fixedDeltaTime),
+                   Mathf.SmoothDamp(Mathf.Abs(accCommand.z) <= accPrecision ? 0f : accCommand.z, 0, ref smoothVelocity.z, 2f * TimeWarp.fixedDeltaTime, flightData.availableLinAcc.z, TimeWarp.fixedDeltaTime)
+               );
 
-				xyzDriven = true;
-				xyzOut.x = Mathf.Clamp (fx / flightData.availableForce.x, -1.0f, +1.0f);
-				xyzOut.y = Mathf.Clamp (fy / flightData.availableForce.y, -1.0f, +1.0f);
-				xyzOut.z = Mathf.Clamp (fz / flightData.availableForce.z, -1.0f, +1.0f);
+               xyzDriven = true;
+               xyzOut.x = Mathf.Clamp(Kp_Acc * Adj.x / TimeWarp.fixedDeltaTime / flightData.availableLinAcc.x, -1.0f, +1.0f);
+               xyzOut.y = Mathf.Clamp(Kp_Acc * Adj.y / TimeWarp.fixedDeltaTime / flightData.availableLinAcc.y, -1.0f, +1.0f);
+               xyzOut.z = Mathf.Clamp(Kp_Acc * Adj.z / TimeWarp.fixedDeltaTime / flightData.availableLinAcc.z, -1.0f, +1.0f);
+
+               print(accCommand.ToString("F3") + " " + Adj.ToString("F3") + " " + flightData.vessel.GetTotalMass().ToString("F3") + " " + flightData.mass.ToString("F3"));
+                */
+
+                Vector3 linAcc = flightData.availableLinAcc / 2;
+
+                Vector3d adj = new Vector3d(
+                    accCommand.x / (linAcc.x * TimeWarp.fixedDeltaTime),
+                    accCommand.y / (linAcc.y * TimeWarp.fixedDeltaTime),
+                    accCommand.z / (linAcc.z * TimeWarp.fixedDeltaTime)
+                    );
+
+                //adj = rvelPid.Compute(adj);
+
+                xyzDriven = true;
+                xyzOut.x = Mathf.Clamp((float)adj.x * Kp_Acc, -0.5f, +0.5f);
+                xyzOut.y = Mathf.Clamp((float)adj.y * Kp_Acc, -0.5f, +0.5f);
+                xyzOut.z = Mathf.Clamp((float)adj.z * Kp_Acc, -0.5f, +0.5f);                
+                                
 			}
 		}
-		
+
 		void print(string s)
 		{
 			UnityEngine.Debug.Log("GNC: " + s);
@@ -1142,7 +1289,7 @@ namespace ORDA
 		public sVector3 userRateSetting;
 		public sVector3 userAttSetting;
 		public sVector3 userAttUpSetting;
-		public sVector3 userPosSetting;
+		public sVector3d userPosSetting;
 		public float Kp_AngVel;
 		public float Kp_AngAcc;
 		public float Kp_Vel;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -23,6 +23,24 @@ namespace ORDA
 
 		public float x, y, z;
 	}
+
+    [Serializable()]
+    public class sVector3d
+    {
+        public sVector3d(Vector3d v)
+        {
+            x = v.x;
+            y = v.y;
+            z = v.z;
+        }
+
+        public Vector3d toVector3()
+        {
+            return new Vector3d(x, y, z);
+        }
+
+        public double x, y, z;
+    }
 
 	public class VesselComparer : IComparer<Vessel>
 	{
@@ -95,18 +113,18 @@ namespace ORDA
 		//
 		// vector/scalar utils
 		//
-		static public Vector3 reorder (Vector3 v, int order)
+		static public Vector3d reorder (Vector3d v, int order)
 		{
 			Vector3 r = Vector3.zero;
 
 			switch (order) {
-			case 123: r = new Vector3(v.x, v.y, v.z); break;
-			case 132: r = new Vector3(v.x, v.z, v.y); break;
-			case 213: r = new Vector3(v.y, v.x, v.z); break;
-			case 231: r = new Vector3(v.y, v.z, v.x); break;
-			case 312: r = new Vector3(v.z, v.x, v.y); break;
-			case 321: r = new Vector3(v.z, v.y, v.x); break;
-			default:  r = new Vector3(v.x, v.y, v.z); break;
+			case 123: r = new Vector3d(v.x, v.y, v.z); break;
+			case 132: r = new Vector3d(v.x, v.z, v.y); break;
+			case 213: r = new Vector3d(v.y, v.x, v.z); break;
+			case 231: r = new Vector3d(v.y, v.z, v.x); break;
+			case 312: r = new Vector3d(v.z, v.x, v.y); break;
+			case 321: r = new Vector3d(v.z, v.y, v.x); break;
+			default:  r = new Vector3d(v.x, v.y, v.z); break;
 			}
 
 			return r;
@@ -254,17 +272,17 @@ namespace ORDA
 		// impact/landing simulation
 		//
 		static public bool simulateImpact (FlightData flightData,
-		                                   out float outMinAltitude,
+		                                   out double outMinAltitude,
 		                                   out float outTime,
-		                                   out float outVelocity)
+                                           out double outVelocity)
 		{
 			float engineAccel = flightData.availableEngineAccUp * FlightInputHandler.state.mainThrottle;
 
 			// state
-			float simAltitue = flightData.altitudeAGL;
-			float simMinAltitude = simAltitue;
+			double simAltitue = flightData.altitudeAGL;
+            double simMinAltitude = simAltitue;
 			float simTime = 0;
-			float simVelocity = flightData.verticalSpeed;
+            double simVelocity = flightData.verticalSpeed;
 			float simStep = 0.1f;
 			float simMaxTime = 1000;
 			bool simAborted = false;

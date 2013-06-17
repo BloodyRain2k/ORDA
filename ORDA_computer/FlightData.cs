@@ -18,24 +18,35 @@ namespace ORDA
 
 		// vehicle state
 		public Vector3 angularVelocity = Vector3.zero;		// ship frame
-		public Vector3 orbitUp = Vector3.zero;				// inertial frame
-		public Vector3 orbitVelocity = Vector3.zero;		// inertial frame
-		public Vector3 orbitNormal = Vector3.zero;			// inertial frame
-		public Vector3 targetRelPosition = Vector3.zero;	// inertial frame
-		public Vector3 targetRelVelocity = Vector3.zero;	// inertial frame
-		public Vector3 targetRelPositionShip = Vector3.zero;// ship frame
-		public Vector3 targetRelVelocityShip = Vector3.zero;// ship frame
-		public float altitudeASL = 0;
-		public float altitudeAGL = 0;
-		public float verticalSpeed = 0;
-		public float horizontalSpeed = 0;
+		public Vector3d orbitUp = Vector3.zero;				// inertial frame
+		public Vector3d orbitVelocity = Vector3.zero;		// inertial frame
+		public Vector3d orbitNormal = Vector3.zero;			// inertial frame
+		public Vector3d targetRelPosition = Vector3.zero;	// inertial frame
+		public Vector3d targetRelVelocity = Vector3.zero;	// inertial frame
+		public Vector3d targetRelPositionShip = Vector3.zero;// ship frame
+		public Vector3d targetRelVelocityShip = Vector3.zero;// ship frame
+        public double altitudeASL = 0;
+        public double altitudeAGL = 0;
+		public double verticalSpeed = 0;
+        public double horizontalSpeed = 0;
 
 		// vehicle dynamics
 		public float mass = 0;
 		public Vector3 CoM = Vector3.zero;
 		public Vector3 MoI = Vector3.zero;
-		public Vector3 availableTorque = Vector3.zero;		// cmg+(rcs if enabled) pitch, roll, yaw
-		public Vector3 availableTorqueMax = Vector3.zero;	// cmg+rcs
+        public Vector3 MoIRatio = Vector3.zero;
+
+        public Vector3 MoI0 = Vector3.zero;
+        public Vector3 MoI1 = Vector3.zero;
+        public Vector3 MoI2 = Vector3.zero;
+        public Vector3 MoI3 = Vector3.zero;
+
+        public Vector3 availableTorque = Vector3.zero;		// cmg+(rcs if enabled) pitch, roll, yaw
+		public Vector3 availableTorquePos = Vector3.zero;		// cmg+(rcs if enabled) pitch, roll, yaw
+        public Vector3 availableTorqueNeg = Vector3.zero;		// cmg+(rcs if enabled) pitch, roll, yaw
+        public Vector3 availableTorqueMax = Vector3.zero;	// cmg+rcs
+		public Vector3 availableTorqueMaxPos = Vector3.zero;	// cmg+rcs
+        public Vector3 availableTorqueMaxNeg = Vector3.zero;	// cmg+rcs
 		public Vector3 availableForce = Vector3.zero;
 		public Vector3 availableAngAcc = Vector3.zero;		// cmg+(rcs if enabled)
 		public Vector3 availableAngAccMax = Vector3.zero;	// cmg+rcs
@@ -44,6 +55,8 @@ namespace ORDA
 		public float availableEngineThrustUp = 0;
 		public float availableEngineAcc = 0;
 		public float availableEngineAccUp = 0;
+
+        public float maxRCSDist = 0;
 
 		public FlightData ()
 		{
@@ -59,76 +72,123 @@ namespace ORDA
 			angularVelocity = vessel.ReferenceTransform.InverseTransformDirection (vessel.rigidbody.angularVelocity);
 			orbitUp = Util.reorder (vessel.orbit.pos, 132).normalized;
 			orbitVelocity = Util.reorder (vessel.orbit.vel, 132).normalized;
-			orbitNormal = -Vector3.Cross (orbitUp, orbitVelocity).normalized;
+			orbitNormal = -Vector3d.Cross (orbitUp, orbitVelocity).normalized;
 			if (targetVessel != null) {
 				targetRelPosition = Util.reorder (targetVessel.orbit.pos - vessel.orbit.pos, 132);
 				targetRelVelocity = Util.reorder (targetVessel.orbit.vel - vessel.orbit.vel, 132);
 				targetRelPositionShip = vessel.ReferenceTransform.InverseTransformDirection (targetRelPosition);
 				targetRelVelocityShip = vessel.ReferenceTransform.InverseTransformDirection (targetRelVelocity);
 			} else {
-				targetRelPosition = Vector3.zero;
-				targetRelVelocity = Vector3.zero;
-				targetRelPositionShip = Vector3.zero;
-				targetRelVelocityShip = Vector3.zero;
+				targetRelPosition = Vector3d.zero;
+				targetRelVelocity = Vector3d.zero;
+				targetRelPositionShip = Vector3d.zero;
+				targetRelVelocityShip = Vector3d.zero;
 			}
-			altitudeASL = (float)vessel.altitude;
-			altitudeAGL = (float)(vessel.altitude - vessel.terrainAltitude);
+			altitudeASL = vessel.altitude;
+			altitudeAGL = vessel.altitude - vessel.terrainAltitude;
 			foreach (Part p in vessel.parts) {
 				if (p.collider != null) {
 					Vector3d bottomPoint = p.collider.ClosestPointOnBounds (vessel.mainBody.position);
-					float partBottomAlt = (float)(vessel.mainBody.GetAltitude (bottomPoint) - vessel.terrainAltitude);
-					altitudeAGL = Mathf.Max (0, Mathf.Min (altitudeAGL, partBottomAlt));
+					double partBottomAlt = vessel.mainBody.GetAltitude (bottomPoint) - vessel.terrainAltitude;
+					altitudeAGL = Math.Max (0, Math.Min (altitudeAGL, partBottomAlt));
 				}
 			}
-			Vector3 up = (CoM - vessel.mainBody.position).normalized;
-			Vector3 velocityVesselSurface = vessel.orbit.GetVel () - vessel.mainBody.getRFrmVel (CoM);
-			verticalSpeed = Vector3.Dot (velocityVesselSurface, up);
+			Vector3d up = (CoM - vessel.mainBody.position).normalized;
+			Vector3d velocityVesselSurface = vessel.orbit.GetVel () - vessel.mainBody.getRFrmVel (CoM);
+			verticalSpeed = Vector3d.Dot (velocityVesselSurface, up);
 			horizontalSpeed = (velocityVesselSurface - (up * verticalSpeed)).magnitude;
 
 			// inspect vessel's parts
 			// accumulate mass, inertia, torque and force
 			mass = 0;
-			MoI = vessel.findLocalMOI (CoM);
-			availableTorque = Vector3.zero;
-			availableTorqueMax = Vector3.zero;
+            // Easier to use the builtin than to compute it :p
+            // But is it right ?
+			//MoI = vessel.findLocalMOI (CoM);
+
+            MoI = Vector3.zero;
+
+            MoI0 = vessel.findLocalMOI(CoM);
+            MoI1 = vessel.findLocalMOI(CoM);
+            MoI2 = Vector3.zero;
+            MoI3 = Vector3.zero;
+
+            availableTorque = Vector3.zero;
+			availableTorquePos = Vector3.zero;
+            availableTorqueNeg = Vector3.zero;
+            availableTorqueMax = Vector3.zero;
+            availableTorqueMaxPos = Vector3.zero;
+            availableTorqueMaxNeg = Vector3.zero;            
 			availableForce = Vector3.zero;
 			Vector3 availableForcePos = Vector3.zero;
 			Vector3 availableForceNeg = Vector3.zero;
 			availableEngineThrust = 0;
 			availableEngineThrustUp = 0;
 
+            maxRCSDist = 0;
+
 			foreach (Part p in vessel.parts) {
-				mass += p.mass;
-				MoI += p.Rigidbody.inertiaTensor;
+                
+                Vector3 partPosition = vessel.transform.InverseTransformDirection(p.Rigidbody.worldCenterOfMass - CoM);
+
+                if (p.physicalSignificance == Part.PhysicalSignificance.FULL)
+                {
+                    float pmas = p.mass + p.GetResourceMass();
+                    mass += pmas;
+
+                    //MoI += p.Rigidbody.inertiaTensorRotation * p.Rigidbody.inertiaTensor;
+                    MoI1 += p.Rigidbody.inertiaTensorRotation * p.Rigidbody.inertiaTensor;
+                    MoI2 += p.Rigidbody.inertiaTensorRotation * p.Rigidbody.inertiaTensor;
+                    //print(p.Rigidbody.inertiaTensorRotation.eulerAngles.ToString("F3"));
+
+                    MoI3 += new Vector3(
+                    (partPosition.y * partPosition.y + partPosition.z * partPosition.z) * pmas,
+                    (partPosition.z * partPosition.z + partPosition.x * partPosition.x) * pmas,
+                    (partPosition.x * partPosition.x + partPosition.y * partPosition.y) * pmas
+                    );
+                    
+                    // Test show that that it's the right MoI 
+                    MoI += new Vector3(
+                    (partPosition.y * partPosition.y + partPosition.z * partPosition.z) * pmas,
+                    (partPosition.z * partPosition.z + partPosition.x * partPosition.x) * pmas,
+                    (partPosition.x * partPosition.x + partPosition.y * partPosition.y) * pmas
+                    );
+                    MoI += p.Rigidbody.inertiaTensorRotation * p.Rigidbody.inertiaTensor;
+
+                }
+
+                /*
+                MoI += new Vector3(
+                    (partPosition.y * partPosition.y + partPosition.z * partPosition.z) * pmas,
+                    (partPosition.z * partPosition.z + partPosition.x * partPosition.x) * pmas,
+                    (partPosition.x * partPosition.x + partPosition.y * partPosition.y) * pmas
+                    );
+                 */ 
 
 				foreach(PartModule pm in p.Modules) {
 					if (pm is ModuleRCS) {
 						ModuleRCS moduleRcs = pm as ModuleRCS;
-						if (moduleRcs.isEnabled) {
+                        if (moduleRcs.isEnabled && !moduleRcs.isJustForShow)
+                        {
 							foreach(Transform t in moduleRcs.thrusterTransforms) {
 								// get thruster attributes
-                                float forceMagnitude = moduleRcs.thrusterPower;
-                                Vector3 forceVector = -t.up.normalized;
                                 Vector3 forcePosition = t.position - CoM;
 
-								// calculate how much torque this thruster might produce
-								float CoM_TV_angle = Mathf.Acos(Vector3.Dot(forceVector, forcePosition.normalized));
-								float torqueFraction = Mathf.Sin(CoM_TV_angle);
-								float torque = forceMagnitude * forcePosition.magnitude * torqueFraction;
+                                maxRCSDist = Mathf.Max(maxRCSDist, forcePosition.magnitude);
+                                                                                                                                               
+                                Vector3 thrust = vessel.transform.InverseTransformDirection(t.up) * moduleRcs.thrusterPower;
 
-								// TODO figure out how to split into yaw, pitch & roll
-								//      assume only xx% to compensate for now
-								Vector3 torqueVector = (new Vector3 (torque, torque, torque)) * 0.10f;
+                                Vector3 torqueVector = Vector3.Cross(partPosition, thrust);
+
 								if (vessel.ActionGroups[KSPActionGroup.RCS]) {//FlightInputHandler.RCSLock == false) {
-									availableTorque += torqueVector;
+                                    availableTorquePos += new Vector3(torqueVector.x >= 0 ? torqueVector.x : 0 , torqueVector.y >= 0 ? torqueVector.y : 0, torqueVector.z >= 0 ? torqueVector.z : 0);
+                                    availableTorqueNeg += new Vector3(torqueVector.x < 0 ? -torqueVector.x : 0 , torqueVector.y < 0 ? -torqueVector.y : 0, torqueVector.z < 0 ? -torqueVector.z : 0);
 								}
-								availableTorqueMax += torqueVector;
+                                availableTorqueMaxPos += new Vector3(torqueVector.x >= 0 ? torqueVector.x : 0, torqueVector.y >= 0 ? torqueVector.y : 0, torqueVector.z >= 0 ? torqueVector.z : 0);
+                                availableTorqueMaxNeg += new Vector3(torqueVector.x < 0 ? -torqueVector.x : 0, torqueVector.y < 0 ? -torqueVector.y : 0, torqueVector.z < 0 ? -torqueVector.z : 0);
 
-								// get components in ship frame
-								Vector3 forceVectorShip = vessel.transform.InverseTransformDirection (forceVector).normalized;
-								float fx = forceMagnitude * Vector3.Dot(forceVectorShip, new Vector3(1, 0, 0));
-								float fy = forceMagnitude * Vector3.Dot(forceVectorShip, new Vector3(0, 1, 0));
-								float fz = forceMagnitude * Vector3.Dot(forceVectorShip, new Vector3(0, 0, 1));
+                                float fx = thrust.x;
+                                float fy = thrust.y;
+                                float fz = thrust.z;
 
 								if (fx < 0)
 									availableForceNeg.x -= fx;
@@ -151,11 +211,16 @@ namespace ORDA
 				if (p is CommandPod) {
 					float pyr = ((CommandPod)p).rotPower;
 					Vector3 torque = new Vector3 (pyr, pyr, pyr);
-					availableTorque += torque;
-					availableTorqueMax += torque;
+                    availableTorquePos += torque;
+                    availableTorqueNeg += torque;
+					availableTorqueMaxPos += torque;
+                    availableTorqueMaxNeg += torque;
 				}
+                 
 				// liquid fuel engine
-				else if (p is LiquidFuelEngine && p.State == PartStates.ACTIVE) {
+				else
+                if (p is LiquidFuelEngine && p.State == PartStates.ACTIVE)
+                {
 					LiquidFuelEngine lfe = (LiquidFuelEngine)p;
 					Vector3 tv = vessel.ReferenceTransform.TransformDirection(lfe.thrustVector);
 					float dot = Vector3.Dot(up.normalized, tv.normalized);
@@ -164,24 +229,36 @@ namespace ORDA
 					availableEngineThrustUp += lfe.maxThrust * dot;
 				}
 			}
+
+            MoIRatio = new Vector3(MoI0.x / MoI.x, MoI0.y / MoI.y, MoI0.z / MoI.z);                 
+
 			availableForce.x = Mathf.Min (availableForceNeg.x, availableForcePos.x);
 			availableForce.y = Mathf.Min (availableForceNeg.y, availableForcePos.y);
 			availableForce.z = Mathf.Min (availableForceNeg.z, availableForcePos.z);
 
+            availableTorque.x = Mathf.Min(availableTorqueNeg.x, availableTorquePos.x);
+            availableTorque.y = Mathf.Min(availableTorqueNeg.y, availableTorquePos.y);
+            availableTorque.z = Mathf.Min(availableTorqueNeg.z, availableTorquePos.z);
+
+            availableTorqueMax.x = Mathf.Min(availableTorqueMaxNeg.x, availableTorqueMaxPos.x);
+            availableTorqueMax.y = Mathf.Min(availableTorqueMaxNeg.y, availableTorqueMaxPos.y);
+            availableTorqueMax.z = Mathf.Min(availableTorqueMaxNeg.z, availableTorqueMaxPos.z);
+
 			// calculate available angular / linear acceleration based on physical properties
-			availableAngAcc = new Vector3 (availableTorque.x / MoI.x,
-			                               availableTorque.y / MoI.y,
-			                               availableTorque.z / MoI.z);
-			availableAngAccMax = new Vector3 (availableTorqueMax.x / MoI.x,
-			                                  availableTorqueMax.y / MoI.y,
-			                                  availableTorqueMax.z / MoI.z);
+            availableAngAcc = new Vector3(availableTorque.x / MoI.x,
+                                           availableTorque.y / MoI.y,
+                                           availableTorque.z / MoI.z);
+
+            availableAngAccMax = new Vector3(availableTorqueMax.x / MoI.x,
+                                              availableTorqueMax.y / MoI.y,
+                                              availableTorqueMax.z / MoI.z);
+
 			availableLinAcc = new Vector3 (availableForce.x / mass,
 			                               availableForce.y / mass,
 			                               availableForce.z / mass);
 			availableEngineAcc = availableEngineThrust / mass;
 			availableEngineAccUp = availableEngineThrustUp / mass;
 
-			// ...
 			valid = true;
 		}
 

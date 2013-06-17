@@ -18,13 +18,13 @@ namespace ORDA
 		[KSPField]
 		public string resourceName = "ElectricCharge";
 		[KSPField]
-		public float default_Kp_AngVel = 0.25f;
+		public float default_Kp_AngVel = 30f;
 		[KSPField]
-		public float default_Kp_AngAcc = 0.5f;
+		public float default_Kp_AngAcc = 0.2f;
+        [KSPField]
+		public float default_Kp_Vel = 10f;
 		[KSPField]
-		public float default_Kp_Vel = 0.25f;
-		[KSPField]
-		public float default_Kp_Acc = 0.5f;
+		public float default_Kp_Acc = 0.2f;
 
 		// unit objects
 		VisualHelper visualHelper = null;
@@ -42,7 +42,7 @@ namespace ORDA
 		public enum PageType { PAGE_TARGET=0, PAGE_ORBIT, PAGE_AUTOPILOT, PAGE_LAND };
 		PageType currentPage = PageType.PAGE_TARGET;
 		bool windowIsMinimized = true;
-		Rect windowPositionAndSize;
+        Rect windowPositionAndSize;
 		bool windowPositionInvalid = true;
 		bool windowSizeInvalid = true;
 		const int fullWindowWidth = 350;
@@ -82,9 +82,6 @@ namespace ORDA
 
 		// ...
 		bool outOfPowerFlag = false;
-
-//		[KSPField(isPersistant = false, guiActive = true, guiName = "Status")]
-//        public string Status;
 
 		//
 		// fly by wire handler
@@ -506,6 +503,11 @@ namespace ORDA
 				if (GUILayout.Button ("HOLD", (gncRateMode == GNC.RateMode.HOLD) ? (activeStyle) : (style))) {
 					gnc.requestRateMode (GNC.RateMode.HOLD);
 				}
+                if (GUILayout.Button("TEST", (gncRateMode == GNC.RateMode.TEST) ? (activeStyle) : (style)))
+                {
+                    gnc.requestRateMode(GNC.RateMode.TEST);
+                    print("Test");
+                }
 				GUILayout.EndHorizontal ();
 			}
 			// att
@@ -659,13 +661,13 @@ namespace ORDA
 
 					GUILayout.Label ("Rel. Att. [°]: " + gnc.pyrError.ToString ("F2"));
 					GUILayout.Label ("Rel. Pos. [m]: " + relPosShip.ToString ("F2"));
-					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F2"));
+                    GUILayout.Label("Rel. Vel. [m/s]: " + ((Vector3)flightData.targetRelVelocityShip).ToString("F3"));
 					GUILayout.Label ("Distance:  " + Util.formatValue (relPos.magnitude, "m", "F2"), slabel);
 					GUILayout.Label ("Approach Speed: " + Util.formatValue (flightData.targetRelVelocityShip.magnitude, "m/s"));
 					GUILayout.Label ("Approach Deviation [°]: " + gnc.dockDeviationAngle.ToString ("F2"));
 				} else {
-					GUILayout.Label ("Rel. Pos. [m]: " + flightData.targetRelPositionShip.ToString ("F2"));
-					GUILayout.Label ("Rel. Vel. [m/s]: " + flightData.targetRelVelocityShip.ToString ("F2"));
+                    GUILayout.Label("Rel. Pos. [m]: " + ((Vector3)flightData.targetRelPositionShip).ToString("F3"));
+                    GUILayout.Label("Rel. Vel. [m/s]: " + ((Vector3)flightData.targetRelVelocityShip).ToString("F3"));
 					GUILayout.Label ("Distance:  " + Util.formatValue (flightData.targetRelPosition.magnitude, "m", "F2"), slabel);
 				}
 			}
@@ -683,16 +685,18 @@ namespace ORDA
 				GUILayout.Label ("attError: " + gnc.attError.ToString ("F3"));
 				GUILayout.Label ("pyrError: " + gnc.pyrError.ToString ("F3"));
 				GUILayout.Label ("avelError: " + gnc.avelError.ToString ("F3"));
-				GUILayout.Label ("rposError: " + gnc.rposError.ToString ("F3"));
+				GUILayout.Label ("rposError: " + ((Vector3)gnc.rposError).ToString ("F3"));
 				GUILayout.Label ("rvelError: " + gnc.rvelError.ToString ("F3"));
 				if (flightData.targetVessel != null) {
-					GUILayout.Label ("relPosShip: " + flightData.targetRelPositionShip.ToString ("F3"));
-					GUILayout.Label ("relVelShip: " + flightData.targetRelVelocityShip.ToString ("F3"));
+                    GUILayout.Label("relPosShip: " + ((Vector3)flightData.targetRelPositionShip).ToString("F3"));
+                    GUILayout.Label("relVelShip: " + ((Vector3)flightData.targetRelVelocityShip).ToString("F3"));
 				}
 				GUILayout.Label ("mass: " + Util.formatValue(flightData.mass, "t"));
 				GUILayout.Label ("MoI: " + flightData.MoI.ToString ("F3"));
 				GUILayout.Label ("availableAngAcc: " + flightData.availableAngAcc.ToString ("F3"));
 				GUILayout.Label ("availableLinAcc: " + flightData.availableLinAcc.ToString ("F3"));
+                GUILayout.Label ("Gravity : " + ((Vector3)FlightGlobals.getGeeForceAtPosition(flightData.vessel.findWorldCenterOfMass())).ToString("F3") );
+
 				if(consumePower) {
 					GUILayout.Label ("powerConsumption: " + (gnc.getPowerFactor() * maxPowerConsumption).ToString("F2") + "/" + maxPowerConsumption.ToString("F2"));
 				}
@@ -705,7 +709,7 @@ namespace ORDA
 				float Kp_AngAcc = 0;
 				float Kp_Vel = 0;
 				float Kp_Acc = 0;
-				gnc.getControllerSettings (out Kp_AngVel, out Kp_AngAcc, out Kp_Vel, out Kp_Acc);
+                gnc.getControllerSettings(out Kp_AngVel, out Kp_AngAcc, out Kp_Vel, out Kp_Acc);
 
 				if (Kp_AngVel_string == null) {
 					Kp_AngVel_string = Kp_AngVel.ToString ("F3");
@@ -742,14 +746,14 @@ namespace ORDA
 						Kp_Vel = (float)d;
 					if (Double.TryParse (Kp_Acc_string, out d))
 						Kp_Acc = (float)d;
-					gnc.setControllerSettings (Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
+                    gnc.setControllerSettings(Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
 				}
 				if (GUILayout.Button ("Reset", style)) {
 					Kp_AngVel = gnc.Default_Kp_AngVel;
 					Kp_AngAcc = gnc.Default_Kp_AngAcc;
 					Kp_Vel = gnc.Default_Kp_Vel;
 					Kp_Acc = gnc.Default_Kp_Acc;
-					gnc.setControllerSettings (Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
+                    gnc.setControllerSettings(Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
 					Kp_AngVel_string = null;
 				}
 				GUILayout.EndHorizontal ();
@@ -870,9 +874,9 @@ namespace ORDA
 
 			// simulate impact
 			if (landingImpactToggle) {
-				float simMinAltitude = 0;
+				double simMinAltitude = 0;
 				float simTime = 0;
-				float simVelocity = 0;
+                double simVelocity = 0;
 				bool impact = Util.simulateImpact (flightData, out simMinAltitude, out simTime, out simVelocity);
 
 				// show results
@@ -893,6 +897,20 @@ namespace ORDA
 		{
 			GUILayout.Label ("don't forget to activate RCS!");
 		}
+
+        private void pidGUI(int windowID)
+        {
+            //GUI.DragWindow();
+            GUILayout.BeginVertical();
+
+             //gnc.attPid.configGUI();
+             //gnc.avelPid.configGUI();
+             //gnc.rvelPid.configGUI();
+             //gnc.rposPid.configGUI();
+
+            GUILayout.EndVertical();
+            
+        }
 
 		private void drawGUI ()
 		{
@@ -934,6 +952,9 @@ namespace ORDA
 				if(!windowIsMinimized) {
 					windowPositionAndSize = GUILayout.Window (windowsIDs.computer, windowPositionAndSize, windowGUI, windowTitle, GUILayout.MinWidth (windowWidth));	 
 				}
+
+                // Pids Debug
+                //GUILayout.Window(windowsIDs.transfer + 1, new Rect(10, Screen.height/2, 200, 300), pidGUI, "Pid");
 
 				// warning box
 				if (showRCSWarning) {
