@@ -9,9 +9,9 @@ namespace ORDA
 	{
 		// settings
 		public float Default_Kp_AngVel = 0.25f;
-		public float Default_Kp_AngAcc = 2.0f;
-		public float Default_Kp_Vel = 0.25f;
-		public float Default_Kp_Acc = 2.0f;
+		public float Default_Kp_AngAcc = 0.25f;
+		public float Default_Kp_Vel = 1.0f;
+		public float Default_Kp_Acc = 1.0f;
 
 		public const float Default_eacPulseLength = 0.1f;	// [s]
 		public const float Default_eacPulseLevel = 1.0f;
@@ -855,6 +855,7 @@ namespace ORDA
 						dockStateTimer += dt;
 						if(dockStateTimer > dockStateTransitionDelay) {
 							if (dockDeviationAngle < 120) {
+								parent.vessel.ActionGroups.SetGroup(KSPActionGroup.RCS, true);
 								dockState = DockState.ENTRY;
 								dockDistance = Mathf.Clamp(Vector3.Distance(flightData.vesselPart.transform.position, flightData.targetPart.transform.position), 5f, 50f);
 							}

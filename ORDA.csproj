@@ -69,26 +69,27 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\KSP_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\DLLs\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\..\..\KSP_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>..\DLLs\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System">
-      <HintPath>..\..\..\KSP_Data\Managed\System.dll</HintPath>
+      <HintPath>..\DLLs\System.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System.Core">
-      <HintPath>..\..\..\KSP_Data\Managed\System.Core.dll</HintPath>
+      <HintPath>..\DLLs\System.Core.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System.Xml">
-      <HintPath>..\..\..\KSP_Data\Managed\System.Xml.dll</HintPath>
+      <HintPath>..\DLLs\System.Xml.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\KSP_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\DLLs\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

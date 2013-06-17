@@ -20,11 +20,11 @@ namespace ORDA
 		[KSPField]
 		public float default_Kp_AngVel = 0.25f;
 		[KSPField]
-		public float default_Kp_AngAcc = 2.0f;
+		public float default_Kp_AngAcc = 0.5f;
 		[KSPField]
 		public float default_Kp_Vel = 0.25f;
 		[KSPField]
-		public float default_Kp_Acc = 2.0f;
+		public float default_Kp_Acc = 0.5f;
 
 		// unit objects
 		VisualHelper visualHelper = null;
@@ -83,41 +83,56 @@ namespace ORDA
 		// ...
 		bool outOfPowerFlag = false;
 
+//		[KSPField(isPersistant = false, guiActive = true, guiName = "Status")]
+//        public string Status;
+
 		//
 		// fly by wire handler
 		//
 		private void fly (FlightCtrlState s)
 		{
-			if (!activeSystem)
+			if (!activeSystem) {
+//				Status = (activeSystem ? "A" : "I") + " - Inactive";
 				return;
-
-			bus.yawReq = Mathf.Clamp(s.yaw, -1.0f, +1.0f);
-			bus.pitchReq = Mathf.Clamp(s.pitch, -1.0f, +1.0f);
-			bus.rollReq = Mathf.Clamp(s.roll, -1.0f, +1.0f);
-
-			if(bus.yprDriven) {
-				if(bus.yprRelative) {
-					s.yaw = Mathf.Clamp(s.yaw + bus.yaw, -1.0f, +1.0f);
-					s.pitch = Mathf.Clamp(s.pitch + bus.pitch, -1.0f, +1.0f);
-					s.roll = Mathf.Clamp(s.roll + bus.roll, -1.0f, +1.0f);
-				} else {
-					s.yaw = Mathf.Clamp(bus.yaw, -1.0f, +1.0f);
-					s.pitch = Mathf.Clamp(bus.pitch, -1.0f, +1.0f);
-					s.roll = Mathf.Clamp(bus.roll, -1.0f, +1.0f);
-				}
 			}
 
-			if(bus.xyzDriven) {
-				if(bus.xyzRelative) {
-					s.X = Mathf.Clamp(s.X + bus.x, -1.0f, +1.0f);
-					s.Y = Mathf.Clamp(s.Y + bus.z, -1.0f, +1.0f);
-					s.Z = Mathf.Clamp(s.Z + bus.y, -1.0f, +1.0f);
-				} else {
-					s.X = Mathf.Clamp(bus.x, -1.0f, +1.0f);
-					s.Y = Mathf.Clamp(bus.z, -1.0f, +1.0f);
-					s.Z = Mathf.Clamp(bus.y, -1.0f, +1.0f);
-				}
-			}
+//			Status = string.Format("{0}, {1:F1}, {2:F1}, {3:F1}, {4:F1}, {5:F1}, {6:F1}", (activeSystem ? "A" : "I"), bus.pitch, bus.yaw, bus.roll, bus.x, bus.y, bus.z);
+
+			s.pitch = Mathf.Clamp((s.pitch != 0 && bus.yprRelative ? s.pitch : bus.pitch), -1f, 1f);
+			s.yaw   = Mathf.Clamp((s.yaw   != 0 && bus.yprRelative ? s.yaw   : bus.yaw),   -1f, 1f);
+			s.roll  = Mathf.Clamp((s.roll  != 0 && bus.yprRelative ? s.roll  : bus.roll),  -1f, 1f);
+
+			s.X = Mathf.Clamp((s.X != 0 && bus.xyzRelative ? s.X : bus.x), -1f, 1f);
+			s.Y = Mathf.Clamp((s.Y != 0 && bus.xyzRelative ? s.Y : bus.z), -1f, 1f);
+			s.Z = Mathf.Clamp((s.Z != 0 && bus.xyzRelative ? s.Z : bus.y), -1f, 1f);
+
+//			bus.yawReq = Mathf.Clamp(s.yaw, -1.0f, +1.0f);
+//			bus.pitchReq = Mathf.Clamp(s.pitch, -1.0f, +1.0f);
+//			bus.rollReq = Mathf.Clamp(s.roll, -1.0f, +1.0f);
+//
+//			if(bus.yprDriven) {
+//				if(bus.yprRelative) {
+//					s.yaw = Mathf.Clamp(s.yaw + bus.yaw, -1.0f, +1.0f);
+//					s.pitch = Mathf.Clamp(s.pitch + bus.pitch, -1.0f, +1.0f);
+//					s.roll = Mathf.Clamp(s.roll + bus.roll, -1.0f, +1.0f);
+//				} else {
+//					s.yaw = Mathf.Clamp(bus.yaw, -1.0f, +1.0f);
+//					s.pitch = Mathf.Clamp(bus.pitch, -1.0f, +1.0f);
+//					s.roll = Mathf.Clamp(bus.roll, -1.0f, +1.0f);
+//				}
+//			}
+//
+//			if(bus.xyzDriven) {
+//				if(bus.xyzRelative) {
+//					s.X = Mathf.Clamp(s.X + bus.x, -1.0f, +1.0f);
+//					s.Y = Mathf.Clamp(s.Y + bus.z, -1.0f, +1.0f);
+//					s.Z = Mathf.Clamp(s.Z + bus.y, -1.0f, +1.0f);
+//				} else {
+//					s.X = Mathf.Clamp(bus.x, -1.0f, +1.0f);
+//					s.Y = Mathf.Clamp(bus.z, -1.0f, +1.0f);
+//					s.Z = Mathf.Clamp(bus.y, -1.0f, +1.0f);
+//				}
+//			}
 		}
 
 		//
@@ -1057,18 +1072,18 @@ namespace ORDA
 				}
 
 				// vessel changed? -> re-register fly handler
-				if (thisVessel != null && thisVessel != vessel) {
+				if (thisVessel != null) { //&& thisVessel != vessel) {
 					thisVessel.OnFlyByWire -= new FlightInputCallback (fly);
-					vessel.OnFlyByWire += new FlightInputCallback (fly);
+//					vessel.OnFlyByWire += new FlightInputCallback (fly);
 				}
 
 				// thats us?
 				if (firstPart == part) {
 					// not yet active?
+						vessel.OnFlyByWire += new FlightInputCallback (fly);
 					if (activeSystem == false) {
 						// go active and register fly handler
 						activeSystem = true;
-						vessel.OnFlyByWire += new FlightInputCallback (fly);
 
 						print ("ORDA on " + getNameString () + " going active");
 					} else {
@@ -1078,10 +1093,10 @@ namespace ORDA
 				// not the uppermost part
 				else {
 					// already active?
+						vessel.OnFlyByWire -= new FlightInputCallback (fly);
 					if (activeSystem == true) {
 						// go inactive and remove fly handler
 						activeSystem = false;
-						vessel.OnFlyByWire -= new FlightInputCallback (fly);
 
 						print ("ORDA on " + getNameString () + " going inactive");
 					} else {
@@ -1092,7 +1107,7 @@ namespace ORDA
 				// the vessel reference or the number of parts changed -> assume we (un)docked
 				// this will also trigger on regular staging - there might be a better way hm :/
 				// skip on first call
-				if (thisVessel != null) {
+				if (thisVessel != null || vessel.parts.Contains(targetDockingPort)) {
 					dockEvent = true;
 				}
 

@@ -119,7 +119,7 @@ namespace ORDA
 								// TODO figure out how to split into yaw, pitch & roll
 								//      assume only xx% to compensate for now
 								Vector3 torqueVector = (new Vector3 (torque, torque, torque)) * 0.10f;
-								if (FlightInputHandler.RCSLock == false) {
+								if (vessel.ActionGroups[KSPActionGroup.RCS]) {//FlightInputHandler.RCSLock == false) {
 									availableTorque += torqueVector;
 								}
 								availableTorqueMax += torqueVector;
