@@ -1116,6 +1116,8 @@ namespace ORDA
             //print(flightData.vessel.acceleration.ToString());
 
 			if (attActive && attTransform != null) {
+            	
+            	float mult = (parent.vessel.ActionGroups[KSPActionGroup.RCS] ? 0.5f : 1.0f);
 
 				// get commanded direction in local axis
 				Vector3 error = attTransform.InverseTransformDirection(attCommand);
@@ -1134,15 +1136,15 @@ namespace ORDA
                 float absy = Mathf.Abs(y);
 
 				avelActive = true;
-				Vector3 angAcc = flightData.availableAngAcc / 2 ;
+				Vector3 angAcc = flightData.availableAngAcc * mult ;
 
                 // Maximum allowed angular velocity
                 float maxAngVelocity = Kp_AngVel * Mathf.Deg2Rad;
 
                 Vector3d adj = new Vector3d(
-                    Mathf.Sign(p) * Mathf.Min(Mathf.Sqrt(2f * absp * angAcc.x) * 0.5f, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity),
-                    Mathf.Sign(r) * Mathf.Min(Mathf.Sqrt(2f * absr * angAcc.y) * 0.5f, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity),
-                    Mathf.Sign(y) * Mathf.Min(Mathf.Sqrt(2f * absy * angAcc.z) * 0.5f, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity)
+                    Mathf.Sign(p) * Mathf.Min(Mathf.Sqrt(2f * absp * angAcc.x) * mult, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity),
+                    Mathf.Sign(r) * Mathf.Min(Mathf.Sqrt(2f * absr * angAcc.y) * mult, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity),
+                    Mathf.Sign(y) * Mathf.Min(Mathf.Sqrt(2f * absy * angAcc.z) * mult, maxAngVelocity, flightData.vessel.rigidbody.maxAngularVelocity)
                     );
 
                 //adj = attPid.Compute(adj);

@@ -20,7 +20,7 @@ namespace ORDA
 		[KSPField]
 		public float default_Kp_AngVel = 30f;
 		[KSPField]
-		public float default_Kp_AngAcc = 0.2f;
+		public float default_Kp_AngAcc = 0.1f;
         [KSPField]
 		public float default_Kp_Vel = 10f;
 		[KSPField]
