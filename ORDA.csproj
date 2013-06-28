@@ -46,6 +46,7 @@
     <DefineConstants>TRACE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BetterConfigNode.cs" />
     <Compile Include="ORDA_computer.cs" />
     <Compile Include="ORDA_computer\Bus.cs" />
     <Compile Include="ORDA_computer\Controller.cs" />

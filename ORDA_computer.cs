@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using KSP.IO;
 
 namespace ORDA
 {
@@ -17,14 +18,14 @@ namespace ORDA
 		public float maxPowerConsumption = 4;
 		[KSPField]
 		public string resourceName = "ElectricCharge";
-		[KSPField]
-		public float default_Kp_AngVel = 0.25f;
-		[KSPField]
-		public float default_Kp_AngAcc = 0.5f;
-		[KSPField]
-		public float default_Kp_Vel = 0.25f;
-		[KSPField]
-		public float default_Kp_Acc = 0.5f;
+//		[KSPField]
+//		public float default_Kp_AngVel = 0.25f;
+//		[KSPField]
+//		public float default_Kp_AngAcc = 0.5f;
+//		[KSPField]
+//		public float default_Kp_Vel = 0.25f;
+//		[KSPField]
+//		public float default_Kp_Acc = 0.5f;
 
 		// unit objects
 		VisualHelper visualHelper = null;
@@ -32,6 +33,7 @@ namespace ORDA
 		GNC gnc = null;
 		Bus bus = null;
 		Teleporter teleporter = null;
+		LineRenderer arrow = new LineRenderer();
 
 		// for unit activation, in case there is more than one
 		Vessel thisVessel = null;
@@ -82,6 +84,8 @@ namespace ORDA
 
 		// ...
 		bool outOfPowerFlag = false;
+		bool showDockingArrow = true;
+		string configFile = IOUtils.GetFilePathFor(typeof(ORDA_computer), "ORDA_computer.cfg");
 
 //		[KSPField(isPersistant = false, guiActive = true, guiName = "Status")]
 //        public string Status;
@@ -932,7 +936,9 @@ namespace ORDA
 
 				// main window
 				if(!windowIsMinimized) {
-					windowPositionAndSize = GUILayout.Window (windowsIDs.computer, windowPositionAndSize, windowGUI, windowTitle, GUILayout.MinWidth (windowWidth));	 
+					windowPositionAndSize = GUILayout.Window (windowsIDs.computer, windowPositionAndSize, windowGUI, windowTitle, GUILayout.MinWidth (windowWidth));
+					windowPositionAndSize.x = Mathf.Clamp(windowPositionAndSize.x, 0, Screen.width - windowPositionAndSize.width);
+					windowPositionAndSize.y = Mathf.Clamp(windowPositionAndSize.y, 0, Screen.height - windowPositionAndSize.height);
 				}
 
 				// warning box
@@ -983,6 +989,43 @@ namespace ORDA
 			// save other stuff too?
 		}
 
+		private void Save()
+		{
+			ConfigNode cn = new ConfigNode();
+			cn.AddValue("default_Kp_AngVel", gnc.Default_Kp_AngVel);
+			cn.AddValue("default_Kp_AngAcc", gnc.Default_Kp_AngAcc);
+			cn.AddValue("default_Kp_Vel", gnc.Default_Kp_Vel);
+			cn.AddValue("default_Kp_Acc", gnc.Default_Kp_Acc);
+			var pos = new Vector2(windowPositionAndSize.x, windowPositionAndSize.y);
+			cn.AddValue("showDockingArrow", showDockingArrow);
+			cn.AddValue("window_Pos", pos);
+			if (!File.Exists<ORDA_computer>(configFile)) {
+				File.Create<ORDA_computer>(configFile).Dispose();
+				// how the hell do you create a folder so ConfigNode.Save doesn't error if it's folder's missing?
+			}
+			if (pos != Vector2.zero) { cn.Save(configFile); }
+		}
+		
+		private void Load()
+		{
+//			Debug.Log(File.ReadAllText<ORDA_computer>(configFile));
+			if (!File.Exists<ORDA_computer>(configFile)) { return; }
+			ConfigNode cn = ConfigNode.Load(configFile);
+			if (gnc != null) {
+				gnc.Default_Kp_AngVel = cn.GetValueDefault("default_Kp_AngVel", gnc.Default_Kp_AngVel);
+				gnc.Default_Kp_AngAcc = cn.GetValueDefault("default_Kp_AngAcc", gnc.Default_Kp_AngAcc);
+				gnc.Default_Kp_Vel = cn.GetValueDefault("default_Kp_Vel", gnc.Default_Kp_Vel);
+				gnc.Default_Kp_Acc = cn.GetValueDefault("default_Kp_Acc", gnc.Default_Kp_Acc);
+			}
+			showDockingArrow = cn.GetValueDefault("showDockingArrow", showDockingArrow);
+			Vector2 pos = cn.GetValueDefault("window_Pos", new Vector2(windowPositionAndSize.x, windowPositionAndSize.y));
+			if (pos != Vector2.zero) {
+				windowPositionAndSize.x = pos.x;
+				windowPositionAndSize.y = pos.y;
+				windowPositionInvalid = false;
+			}
+		}
+
 		public override void OnAwake() // Awake -> Load -> Start
 		{
 		}
@@ -1000,6 +1043,22 @@ namespace ORDA
 				gnc = new GNC (flightData, bus, this);
 			}
 			teleporter = new Teleporter (flightData);
+			
+			Load();
+			
+			if (arrow == null) {
+				GameObject obj = new GameObject("dockingArrow");
+				arrow = obj.AddComponent<LineRenderer>();
+				arrow.transform.localPosition = Vector3.zero;
+				arrow.transform.localEulerAngles = Vector3.zero;
+				arrow.useWorldSpace = true;
+				arrow.material = new Material (Shader.Find ("Particles/Additive"));
+				arrow.SetWidth (2.0f, 0.0f);
+				arrow.SetVertexCount (2);
+				arrow.SetPosition (0, Vector3.zero);
+				arrow.SetPosition (1, Vector3.zero);
+				arrow.SetColors (Color.red, Color.yellow);
+			}
 
 			// register gui handler
 			RenderingManager.AddToPostDrawQueue (0, new Callback (drawGUI));
@@ -1046,6 +1105,14 @@ namespace ORDA
 				visualHelper.hideLine (0);
 				visualHelper.hideLine (1);
 				visualHelper.hideLine (2);
+			}
+			
+			if (showDockingArrow && !windowIsMinimized && currentPage == PageType.PAGE_TARGET && targetDockingPort != null) {
+				arrow.SetPosition(0, targetDockingPort.transform.position);
+				arrow.SetPosition(1, targetDockingPort.transform.position + targetDockingPort.transform.up * 20f);
+			} else {
+				arrow.SetPosition(0, Vector3.zero);
+				arrow.SetPosition(1, Vector3.zero);
 			}
 		}
 
@@ -1232,43 +1299,44 @@ namespace ORDA
 				n.AddValue("guiConfig", guiConfigString);
 			}
 
+			if (activeSystem) { Save(); }
 		}
 
 		public override void OnLoad (ConfigNode node)
 		{
 			// get config node
 			ConfigNode n = node.GetNode ("config");
-			if (n == null) {
-				return;
-			}
-
-			// gnc config
-			if (n.HasValue ("gncConfig")) {
-				try {
-					string gncConfigString = n.GetValue ("gncConfig");
-					GNCconfig gncConfig = (GNCconfig)KSP.IO.IOUtils.DeserializeFromBinary (Convert.FromBase64String (gncConfigString.Replace ("*", "=").Replace ("|", "/")));
-					// OnStart not been called yet?
-					if(gnc == null) {
-						flightData = new FlightData ();
-						bus = new Bus ();
-						gnc = new GNC (flightData, bus, this);
+			if (n != null) {
+				// gnc config
+				if (n.HasValue ("gncConfig")) {
+					try {
+						string gncConfigString = n.GetValue ("gncConfig");
+						GNCconfig gncConfig = (GNCconfig)KSP.IO.IOUtils.DeserializeFromBinary (Convert.FromBase64String (gncConfigString.Replace ("*", "=").Replace ("|", "/")));
+						// OnStart not been called yet?
+						if(gnc == null) {
+							flightData = new FlightData ();
+							bus = new Bus ();
+							gnc = new GNC (flightData, bus, this);
+						}
+						gnc.restoreConfiguration (gncConfig);
+					} catch (Exception e) {
+						print ("ORDA_computer.OnLoad: gnc exception: " + e.ToString());
 					}
-					gnc.restoreConfiguration (gncConfig);
-				} catch (Exception e) {
-					print ("ORDA_computer.OnLoad: gnc exception: " + e.ToString());
+				}
+
+				// gui config
+				if (n.HasValue ("guiConfig")) {
+					try {
+						string guiConfigString = n.GetValue ("guiConfig");
+						GUIconfig guiConfig = (GUIconfig)KSP.IO.IOUtils.DeserializeFromBinary (Convert.FromBase64String (guiConfigString.Replace ("*", "=").Replace ("|", "/")));
+						restoreGUIConfiguration (guiConfig);
+					} catch (Exception e) {
+						print ("ORDA_computer.OnLoad: gui exception: " + e.ToString());
+					}
 				}
 			}
 
-			// gui config
-			if (n.HasValue ("guiConfig")) {
-				try {
-					string guiConfigString = n.GetValue ("guiConfig");
-					GUIconfig guiConfig = (GUIconfig)KSP.IO.IOUtils.DeserializeFromBinary (Convert.FromBase64String (guiConfigString.Replace ("*", "=").Replace ("|", "/")));
-					restoreGUIConfiguration (guiConfig);
-				} catch (Exception e) {
-					print ("ORDA_computer.OnLoad: gui exception: " + e.ToString());
-				}
-			}
+			Load();
 		}
 
 		//

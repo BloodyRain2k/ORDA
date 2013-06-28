@@ -9,9 +9,9 @@ namespace ORDA
 	{
 		// settings
 		public float Default_Kp_AngVel = 0.25f;
-		public float Default_Kp_AngAcc = 0.25f;
-		public float Default_Kp_Vel = 1.0f;
-		public float Default_Kp_Acc = 1.0f;
+		public float Default_Kp_AngAcc = 0.5f;
+		public float Default_Kp_Vel = 0.25f;
+		public float Default_Kp_Acc = 0.5f;
 
 		public const float Default_eacPulseLength = 0.1f;	// [s]
 		public const float Default_eacPulseLevel = 1.0f;
@@ -129,10 +129,10 @@ namespace ORDA
 			flightData = fd;
 			bus = b;
 			
-			Kp_AngVel = Default_Kp_AngVel = p.default_Kp_AngVel;
-			Kp_AngAcc = Default_Kp_AngAcc = p.default_Kp_AngAcc;
-			Kp_Vel = Default_Kp_Vel = p.default_Kp_Vel;
-			Kp_Acc = Default_Kp_Acc = p.default_Kp_Acc;
+			Kp_AngVel = Default_Kp_AngVel;// = p.default_Kp_AngVel;
+			Kp_AngAcc = Default_Kp_AngAcc;// = p.default_Kp_AngAcc;
+			Kp_Vel = Default_Kp_Vel;// = p.default_Kp_Vel;
+			Kp_Acc = Default_Kp_Acc;// = p.default_Kp_Acc;
 		}
 
 		public float getPowerFactor ()
