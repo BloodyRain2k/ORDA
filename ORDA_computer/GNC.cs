@@ -11,7 +11,7 @@ namespace ORDA
 		public float Default_Kp_AngVel = 0.25f;
 		public float Default_Kp_AngAcc = 0.5f;
 		public float Default_Kp_Vel = 0.25f;
-		public float Default_Kp_Acc = 0.5f;
+		public float Default_Kp_Acc = 1.0f;
 
 		public const float Default_eacPulseLength = 0.1f;	// [s]
 		public const float Default_eacPulseLevel = 1.0f;
