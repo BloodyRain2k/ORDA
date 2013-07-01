@@ -756,6 +756,18 @@ namespace ORDA
 					gnc.setControllerSettings (Kp_AngVel, Kp_AngAcc, Kp_Vel, Kp_Acc);
 					Kp_AngVel_string = null;
 				}
+				if (GUILayout.Button ("Save", style)) {
+					double d = 0;
+					if (Double.TryParse (Kp_AngVel_string, out d))
+						gnc.Default_Kp_AngVel = (float)d;
+					if (Double.TryParse (Kp_AngAcc_string, out d))
+						gnc.Default_Kp_AngAcc = (float)d;
+					if (Double.TryParse (Kp_Vel_string, out d))
+						gnc.Default_Kp_Vel = (float)d;
+					if (Double.TryParse (Kp_Acc_string, out d))
+						gnc.Default_Kp_Acc = (float)d;
+					Save();
+				}
 				GUILayout.EndHorizontal ();
 
 				// eac settings
