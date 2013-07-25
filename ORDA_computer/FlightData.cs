@@ -102,6 +102,8 @@ namespace ORDA
 				MoI += p.Rigidbody.inertiaTensor;
 
 				foreach(PartModule pm in p.Modules) {
+					if (!pm.isEnabled) { continue; }
+					
 					if (pm is ModuleRCS) {
 						ModuleRCS moduleRcs = pm as ModuleRCS;
 						if (moduleRcs.isEnabled) {
@@ -145,6 +147,16 @@ namespace ORDA
 							}
 						}
 					}
+
+					else if (pm is ModuleReactionWheel)
+					{
+						ModuleReactionWheel rw = (ModuleReactionWheel)pm;
+						if (rw.wheelState == ModuleReactionWheel.WheelState.Active)
+						{
+							availableTorque += new Vector3d(rw.PitchTorque, rw.RollTorque, rw.YawTorque);
+							availableTorqueMax += new Vector3d(rw.PitchTorque, rw.RollTorque, rw.YawTorque);
+						}
+					}
 				}
 
 				// stock command pod
@@ -154,6 +166,7 @@ namespace ORDA
 					availableTorque += torque;
 					availableTorqueMax += torque;
 				}
+				
 				// liquid fuel engine
 				else if (p is LiquidFuelEngine && p.State == PartStates.ACTIVE) {
 					LiquidFuelEngine lfe = (LiquidFuelEngine)p;
