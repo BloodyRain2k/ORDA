@@ -146,13 +146,13 @@ namespace ORDA
 		{
 			PageType oldPage = currentPage;
 
-			GUIStyle style = new GUIStyle (GUI.skin.button); 
+			GUIStyle style = new GUIStyle (GUI.skin.button);
 			style.normal.textColor = style.focused.textColor = Color.white;
 			style.hover.textColor = style.active.textColor = Color.yellow;
 			style.onNormal.textColor = style.onFocused.textColor = style.onHover.textColor = style.onActive.textColor = Color.green;
 			style.padding = new RectOffset (4, 4, 4, 4);
 
-			GUIStyle activeStyle = new GUIStyle (GUI.skin.button); 
+			GUIStyle activeStyle = new GUIStyle (GUI.skin.button);
 			activeStyle.normal.textColor = activeStyle.focused.textColor = Color.red;
 			activeStyle.hover.textColor = activeStyle.active.textColor = Color.yellow;
 			activeStyle.onNormal.textColor = activeStyle.onFocused.textColor = activeStyle.onHover.textColor = activeStyle.onActive.textColor = Color.green;
@@ -190,20 +190,20 @@ namespace ORDA
 
 				// page content
 				switch (currentPage) {
-				case PageType.PAGE_TARGET:
-					windowTargetGUI (style, activeStyle);
-					break;
-				case PageType.PAGE_ORBIT:
-					windowOrbitGUI (style, activeStyle);
-					break;
-				case PageType.PAGE_AUTOPILOT:
-					windowAutopilotGUI (style, activeStyle);
-					break;
-				case PageType.PAGE_LAND:
-					windowLandingGUI (style, activeStyle);
-					break;
-				default:
-					break;
+					case PageType.PAGE_TARGET:
+						windowTargetGUI (style, activeStyle);
+						break;
+					case PageType.PAGE_ORBIT:
+						windowOrbitGUI (style, activeStyle);
+						break;
+					case PageType.PAGE_AUTOPILOT:
+						windowAutopilotGUI (style, activeStyle);
+						break;
+					case PageType.PAGE_LAND:
+						windowLandingGUI (style, activeStyle);
+						break;
+					default:
+						break;
 				}
 
 				GUILayout.EndVertical ();
@@ -359,8 +359,8 @@ namespace ORDA
 			GUILayout.EndHorizontal ();
 			if (targetVessel != null) {
 				if ((targetVessel.vesselType == VesselType.Debris && !targetShowDebris) ||
-					(targetVessel.Landed && !targetShowLanded) ||
-					(targetVessel.packed && !targetShowPacked) ||
+				    (targetVessel.Landed && !targetShowLanded) ||
+				    (targetVessel.packed && !targetShowPacked) ||
 				    (targetVessel.mainBody != this.vessel.mainBody && !targetShowDiffBody)) {
 					targetVessel = null;
 					targetDockingPort = null;
@@ -612,15 +612,15 @@ namespace ORDA
 					if (gncDockState == GNC.DockState.ABORT) {
 						string abortReason = "unknown";
 						switch (gncDockAbort) {
-						case GNC.DockAbort.DEVIATION:
-							abortReason = "Approach deviation > " + Util.formatValue (GNC.dockAbortDeviation, "°");
-							break;
-						case GNC.DockAbort.ATTITUDE:
-							abortReason = "Attitude error > " + Util.formatValue (GNC.dockAbortAttitude, "°");
-							break;
-						case GNC.DockAbort.LATCH:
-							abortReason = "No latch indication";
-							break;
+							case GNC.DockAbort.DEVIATION:
+								abortReason = "Approach deviation > " + Util.formatValue (GNC.dockAbortDeviation, "°");
+								break;
+							case GNC.DockAbort.ATTITUDE:
+								abortReason = "Attitude error > " + Util.formatValue (GNC.dockAbortAttitude, "°");
+								break;
+							case GNC.DockAbort.LATCH:
+								abortReason = "No latch indication";
+								break;
 						}
 						GUILayout.Label ("ABORT: " + abortReason, sred);
 					}
@@ -848,7 +848,7 @@ namespace ORDA
 			}
 
 			// show rcs warning?
-			/*if (FlightInputHandler.RCSLock && 
+			/*if (FlightInputHandler.RCSLock &&
 			    ((gncCommand == GNC.Command.DOCK && gncDockMode == GNC.DockMode.AUTO) ||
 			     gncPosMode != GNC.PosMode.IDLE)) {
 				showRCSWarning = true;
@@ -1020,21 +1020,28 @@ namespace ORDA
 		
 		private void Load()
 		{
+			try
+			{
 //			Debug.Log(File.ReadAllText<ORDA_computer>(configFile));
-			if (!File.Exists<ORDA_computer>(configFile)) { return; }
-			ConfigNode cn = ConfigNode.Load(configFile);
-			if (gnc != null) {
-				gnc.Default_Kp_AngVel = cn.GetValueDefault("default_Kp_AngVel", gnc.Default_Kp_AngVel);
-				gnc.Default_Kp_AngAcc = cn.GetValueDefault("default_Kp_AngAcc", gnc.Default_Kp_AngAcc);
-				gnc.Default_Kp_Vel = cn.GetValueDefault("default_Kp_Vel", gnc.Default_Kp_Vel);
-				gnc.Default_Kp_Acc = cn.GetValueDefault("default_Kp_Acc", gnc.Default_Kp_Acc);
+				if (!File.Exists<ORDA_computer>(configFile)) { return; }
+				ConfigNode cn = ConfigNode.Load(configFile);
+				if (gnc != null) {
+					gnc.Default_Kp_AngVel = cn.GetValueDefault("default_Kp_AngVel", gnc.Default_Kp_AngVel);
+					gnc.Default_Kp_AngAcc = cn.GetValueDefault("default_Kp_AngAcc", gnc.Default_Kp_AngAcc);
+					gnc.Default_Kp_Vel = cn.GetValueDefault("default_Kp_Vel", gnc.Default_Kp_Vel);
+					gnc.Default_Kp_Acc = cn.GetValueDefault("default_Kp_Acc", gnc.Default_Kp_Acc);
+				}
+				showDockingArrow = cn.GetValueDefault("showDockingArrow", showDockingArrow);
+				Vector2 pos = cn.GetValueDefault("window_Pos", new Vector2(windowPositionAndSize.x, windowPositionAndSize.y));
+				if (pos != Vector2.zero) {
+					windowPositionAndSize.x = pos.x;
+					windowPositionAndSize.y = pos.y;
+					windowPositionInvalid = false;
+				}
 			}
-			showDockingArrow = cn.GetValueDefault("showDockingArrow", showDockingArrow);
-			Vector2 pos = cn.GetValueDefault("window_Pos", new Vector2(windowPositionAndSize.x, windowPositionAndSize.y));
-			if (pos != Vector2.zero) {
-				windowPositionAndSize.x = pos.x;
-				windowPositionAndSize.y = pos.y;
-				windowPositionInvalid = false;
+			catch (Exception ex)
+			{
+				Debug.Log("ORDA: Error while loading config: " + ex.Message);
 			}
 		}
 
@@ -1159,7 +1166,7 @@ namespace ORDA
 				// thats us?
 				if (firstPart == part) {
 					// not yet active?
-						vessel.OnFlyByWire += new FlightInputCallback (fly);
+					vessel.OnFlyByWire += new FlightInputCallback (fly);
 					if (activeSystem == false) {
 						// go active and register fly handler
 						activeSystem = true;
@@ -1172,7 +1179,7 @@ namespace ORDA
 				// not the uppermost part
 				else {
 					// already active?
-						vessel.OnFlyByWire -= new FlightInputCallback (fly);
+					vessel.OnFlyByWire -= new FlightInputCallback (fly);
 					if (activeSystem == true) {
 						// go inactive and remove fly handler
 						activeSystem = false;
@@ -1224,7 +1231,7 @@ namespace ORDA
 			// consume power
 			bool hasPower = true;
 			if (consumePower) {
-				float powerFactor = gnc.getPowerFactor ();
+				float powerFactor = gnc.getPowerFactor();
 				float energyRequest = maxPowerConsumption * powerFactor * dt;
 				float energyDrawn = part.RequestResource (resourceName, energyRequest);
 				if (energyDrawn < energyRequest * 0.9) {
