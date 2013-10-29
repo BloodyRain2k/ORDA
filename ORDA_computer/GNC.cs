@@ -8,10 +8,10 @@ namespace ORDA
 	public class GNC
 	{
 		// settings
-		public float Default_Kp_AngVel = 0.25f;
-		public float Default_Kp_AngAcc = 0.5f;
-		public float Default_Kp_Vel = 0.25f;
-		public float Default_Kp_Acc = 1.0f;
+		public float Default_Kp_AngVel = 0.2f;
+		public float Default_Kp_AngAcc = 1.25f;
+		public float Default_Kp_Vel = 0.2f;
+		public float Default_Kp_Acc = 1.25f;
 
 		public const float Default_eacPulseLength = 0.1f;	// [s]
 		public const float Default_eacPulseLevel = 1.0f;
@@ -39,7 +39,7 @@ namespace ORDA
 		// states
 		public enum Command { OFF=0, RATE, ATT, EAC, DOCK };
 		public enum RateMode { IDLE=0, ZERO, ROLL, HOLD };
-		public enum AttMode { IDLE=0, REF, HOLD, VP, VN, NP, NN, RP, RN, RPP, RPN, RVP, RVN };
+		public enum AttMode { IDLE=0, REF, HOLD, VP, VN, NP, NN, RP, RN, RPP, RPN, RVP, RVN, NODE, SVN };
 		public enum PosMode { IDLE=0, ZERO, HOLD, VN, RN, RETREAT };
 		public enum EACMode { IDLE=0, PULSE, RATE, RATE_ATT };
 		public enum DockMode { IDLE=0, ATTITUDE, AUTO };
@@ -190,10 +190,30 @@ namespace ORDA
 			outDockMode = dockMode;
 		}
 		
-		public Command getCommand() {
-			return command;
+		public Command curCommand {
+			get { return command; }
 		}
-
+		
+		public RateMode curRateMode {
+			get { return rateMode; }
+		}
+		
+		public AttMode curAttMode {
+			get { return attMode; }
+		}
+		
+		public EACMode curEACMode {
+			get { return eacMode; }
+		}
+		
+		public PosMode curPosMode {
+			get { return posMode; }
+		}
+		
+		public DockMode curDockMode {
+			get { return dockMode; }
+		}
+		
 		public void getDockState (out DockState outDockState,
 		                          out DockAbort outDockAbort)
 		{
@@ -591,49 +611,55 @@ namespace ORDA
 
 			attActive = true;
 			switch (attMode) {
-			case AttMode.REF:
-				attUpActive = true;
-				attCommand = new Vector3 (1, 0, 0);
-				attUpCommand = new Vector3 (0, 1, 0);
-				break;
-			case AttMode.HOLD:
-				attUpActive = true;
-				attCommand = userAttSetting;
-				attUpCommand = userAttUpSetting;
-				break;
-			case AttMode.VP:
-				attCommand = flightData.orbitVelocity.normalized;
-				break;
-			case AttMode.VN:
-				attCommand = -flightData.orbitVelocity.normalized;
-				break;
-			case AttMode.NP:
-				attCommand = flightData.orbitNormal.normalized;
-				break;
-			case AttMode.NN:
-				attCommand = -flightData.orbitNormal.normalized;
-				break;
-			case AttMode.RP:
-				attCommand = flightData.orbitUp.normalized;
-				break;
-			case AttMode.RN:
-				attCommand = -flightData.orbitUp.normalized;
-				break;
-			case AttMode.RPP:
-				attCommand = flightData.targetRelPosition.normalized;
-				break;
-			case AttMode.RPN:
-				attCommand = -flightData.targetRelPosition.normalized;
-				break;
-			case AttMode.RVP:
-				attCommand = -flightData.targetRelVelocity.normalized;
-				break;
-			case AttMode.RVN:
-				attCommand = flightData.targetRelVelocity.normalized;
-				break;
-			default:
-				attActive = false;
-				break;
+				case AttMode.REF:
+					attUpActive = true;
+					attCommand = new Vector3 (1, 0, 0);
+					attUpCommand = new Vector3 (0, 1, 0);
+					break;
+				case AttMode.HOLD:
+					attUpActive = true;
+					attCommand = userAttSetting;
+					attUpCommand = userAttUpSetting;
+					break;
+				case AttMode.VP:
+					attCommand = flightData.orbitVelocity.normalized;
+					break;
+				case AttMode.VN:
+					attCommand = -flightData.orbitVelocity.normalized;
+					break;
+				case AttMode.NP:
+					attCommand = flightData.orbitNormal.normalized;
+					break;
+				case AttMode.NN:
+					attCommand = -flightData.orbitNormal.normalized;
+					break;
+				case AttMode.RP:
+					attCommand = flightData.orbitUp.normalized;
+					break;
+				case AttMode.RN:
+					attCommand = -flightData.orbitUp.normalized;
+					break;
+				case AttMode.RPP:
+					attCommand = flightData.targetRelPosition.normalized;
+					break;
+				case AttMode.RPN:
+					attCommand = -flightData.targetRelPosition.normalized;
+					break;
+				case AttMode.RVP:
+					attCommand = -flightData.targetRelVelocity.normalized;
+					break;
+				case AttMode.RVN:
+					attCommand = flightData.targetRelVelocity.normalized;
+					break;
+				case AttMode.NODE:
+					attCommand = flightData.nextNode;
+					break;
+				case AttMode.SVN:
+					attCommand = -flightData.vessel.srf_velocity;
+					break;
+				default:
+					attActive = false;
+					break;
 			}
 		}
 

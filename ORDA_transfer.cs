@@ -158,6 +158,8 @@ namespace ORDA
 			lineRenderer.SetPosition (0, Vector3.zero);
 			lineRenderer.SetPosition (1, Vector3.zero);
 			lineRenderer.SetColors (Color.gray, Color.gray);
+			
+			knownResources = new List<string>();
 		}
 
 		public override void OnUpdate()
@@ -359,10 +361,13 @@ namespace ORDA
 
 		public override void OnFixedUpdate ()
 		{
-			if (knownResources.Count == 0 && ResourceDisplay.Instance != null) {
+			if (knownResources.Count == 0) {
+				if (ResourceDisplay.Instance == null) { return; }
 				ResourceDisplay.Instance.resourceItems.ForEach(rI => knownResources.Add(rI.nameText.Text));
 			}
 
+			if (knownResources.Count == 0) { return; }
+			
 			float dt = TimeWarp.fixedDeltaTime;
 			string resourceName = knownResources[selectedResource];
 

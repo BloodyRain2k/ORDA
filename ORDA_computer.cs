@@ -37,7 +37,6 @@ namespace ORDA
 
 		// for unit activation, in case there is more than one
 		Vessel thisVessel = null;
-		int thisVesselParts = 0;
 		bool activeSystem = false;
 
 		// gui
@@ -73,7 +72,7 @@ namespace ORDA
 		bool showRCSWarning = false;
 
 		// gui landing page
-		bool landingStatsToggle = false;
+		bool landingStatsToggle = true;
 		bool landingImpactToggle = true;
 
 		// target
@@ -521,8 +520,11 @@ namespace ORDA
 
 				GUILayout.BeginHorizontal ();
 				GUILayout.Label ("Att: ");
-				if (GUILayout.Button ("REF", (gncAttMode == GNC.AttMode.REF) ? (activeStyle) : (style))) {
-					gnc.requestAttMode (GNC.AttMode.REF);
+//				if (GUILayout.Button ("REF", (gncAttMode == GNC.AttMode.REF) ? (activeStyle) : (style))) {
+//					gnc.requestAttMode (GNC.AttMode.REF);
+//				}
+				if (GUILayout.Button ("NODE", (gncAttMode == GNC.AttMode.NODE) ? (activeStyle) : (style))) {
+					gnc.requestAttMode (GNC.AttMode.NODE);
 				}
 				if (GUILayout.Button ("HOLD", (gncAttMode == GNC.AttMode.HOLD) ? (activeStyle) : (style))) {
 					gnc.requestAttMode (GNC.AttMode.HOLD);
@@ -541,6 +543,9 @@ namespace ORDA
 				}
 				GUILayout.EndHorizontal ();
 				GUILayout.BeginHorizontal ();
+				if (GUILayout.Button ("SV-", (gnc.curAttMode == GNC.AttMode.SVN) ? (activeStyle) : (style))) {
+					gnc.requestAttMode(GNC.AttMode.SVN);
+				}
 				if (GUILayout.Button ("V+", (gncAttMode == GNC.AttMode.VP) ? (activeStyle) : (style))) {
 					gnc.requestAttMode (GNC.AttMode.VP);
 				}
@@ -864,12 +869,12 @@ namespace ORDA
 
 			// visualization
 			GUILayout.BeginHorizontal ();
-			GUILayout.Label ("AGL: " + Util.formatValue (flightData.altitudeAGL, "m"), GUILayout.Width(fullWindowWidth/3));
-			GUILayout.Label ("VS: " + Util.formatValue (flightData.verticalSpeed, "m/s"));
-			GUILayout.Label ("HS: " + Util.formatValue (flightData.horizontalSpeed, "m/s"));
+			GUILayout.Label ("AGL: " + Util.formatValue (flightData.altitudeAGL, "m"), GUILayout.ExpandWidth (true));
+			GUILayout.Label ("VS: " + Util.formatValue (flightData.verticalSpeed, "m/s"), GUILayout.ExpandWidth (true));
+			GUILayout.Label ("HS: " + Util.formatValue (flightData.horizontalSpeed, "m/s"), GUILayout.ExpandWidth (true));
 			GUILayout.EndHorizontal ();
 			GUILayout.BeginHorizontal ();
-			landingStatsToggle = GUILayout.Toggle (landingStatsToggle, "Show stats", GUILayout.ExpandWidth (true));
+			landingStatsToggle = GUILayout.Toggle (landingStatsToggle, "Show stats", GUILayout.Width(fullWindowWidth / 2));
 			landingImpactToggle = GUILayout.Toggle (landingImpactToggle, "Simulate impact", GUILayout.ExpandWidth (true));
 			GUILayout.EndHorizontal ();
 
@@ -1081,6 +1086,81 @@ namespace ORDA
 
 			// register gui handler
 			RenderingManager.AddToPostDrawQueue (0, new Callback (drawGUI));
+			GameEvents.onVesselChange.Add(OnVesselChange);
+		}
+		
+		public void OnVesselChange(Vessel vessel)
+		{
+			// first time, vessel changed or lost some parts?
+			if (thisVessel != vessel || thisVessel == null) {
+
+				// find uppermost part
+				int firstPartInverseStage = 0;
+				Part firstPart = null;
+				foreach (Part p in vessel.parts) {
+					foreach(PartModule pm in p.Modules) {
+						if(pm is ORDA_computer) {
+							if (firstPart == null || p.inverseStage < firstPartInverseStage) {
+								firstPart = p;
+								firstPartInverseStage = p.inverseStage;
+							}
+						}
+					}
+				}
+
+				// vessel changed? -> re-register fly handler
+				if (thisVessel != null) { //&& thisVessel != vessel) {
+					thisVessel.OnFlyByWire -= new FlightInputCallback (fly);
+					// vessel.OnFlyByWire += new FlightInputCallback (fly);
+				}
+
+				// thats us?
+				if (firstPart == part) {
+					// not yet active?
+					vessel.OnFlyByWire += new FlightInputCallback (fly);
+					if (activeSystem == false) {
+						// go active and register fly handler
+						activeSystem = true;
+
+						print ("ORDA on " + getNameString () + " going active");
+					} else {
+						print ("ORDA on " + getNameString () + " already active");
+					}
+				}
+				// not the uppermost part
+				else {
+					// already active?
+					vessel.OnFlyByWire -= new FlightInputCallback (fly);
+					if (activeSystem == true) {
+						// go inactive and remove fly handler
+						activeSystem = false;
+
+						print ("ORDA on " + getNameString () + " going inactive");
+					} else {
+						print ("ORDA on " + getNameString () + " doing nothing");
+					}
+				}
+
+				// the vessel reference or the number of parts changed -> assume we (un)docked
+				// this will also trigger on regular staging - there might be a better way hm :/
+				// skip on first call
+				if (thisVessel != null || vessel.parts.Contains(targetDockingPort)) {
+					// activate rate dampening if detected docking/undocking
+
+					// need to find a proper way to detect docking/undocking first
+					gnc.requestCommand (GNC.Command.OFF);
+					/*gnc.requestCommand (GNC.Command.RATE);
+					gnc.requestRateMode (GNC.RateMode.ZERO);
+					print ("reset to rate dampening");*/
+
+					// windowSizeInvalid = true;
+					targetVessel = null;
+					targetDockingPort = null;
+					vesselDockingPort = null;
+				}
+
+				thisVessel = vessel;
+			}
 		}
 
 		public override void OnUpdate()
@@ -1127,8 +1207,10 @@ namespace ORDA
 			}
 			
 			if (showDockingArrow && !windowIsMinimized && currentPage == PageType.PAGE_TARGET && targetDockingPort != null) {
+				var portDirection = targetDockingPort.transform.up;
+				if (targetDockingPort.name == "dockingPortLateral") { portDirection = -targetDockingPort.transform.forward; }
 				arrow.SetPosition(0, targetDockingPort.transform.position);
-				arrow.SetPosition(1, targetDockingPort.transform.position + targetDockingPort.transform.up * 20f);
+				arrow.SetPosition(1, targetDockingPort.transform.position + portDirection * 20f);
 			} else {
 				arrow.SetPosition(0, Vector3.zero);
 				arrow.SetPosition(1, Vector3.zero);
@@ -1138,68 +1220,8 @@ namespace ORDA
 		public override void OnFixedUpdate()
 		{
 			float dt = Time.fixedDeltaTime;
-			bool dockEvent = false;
-
-			// first time, vessel changed or lost some parts?
-			if (thisVessel == null || thisVessel != vessel || thisVesselParts != vessel.parts.Count) {
-
-				// find uppermost part
-				int firstPartInverseStage = 0;
-				Part firstPart = null;
-				foreach (Part p in vessel.parts) {
-					foreach(PartModule pm in p.Modules) {
-						if(pm is ORDA_computer) {
-							if (firstPart == null || p.inverseStage < firstPartInverseStage) {
-								firstPart = p;
-								firstPartInverseStage = p.inverseStage;
-							}
-						}
-					}
-				}
-
-				// vessel changed? -> re-register fly handler
-				if (thisVessel != null) { //&& thisVessel != vessel) {
-					thisVessel.OnFlyByWire -= new FlightInputCallback (fly);
-//					vessel.OnFlyByWire += new FlightInputCallback (fly);
-				}
-
-				// thats us?
-				if (firstPart == part) {
-					// not yet active?
-					vessel.OnFlyByWire += new FlightInputCallback (fly);
-					if (activeSystem == false) {
-						// go active and register fly handler
-						activeSystem = true;
-
-						print ("ORDA on " + getNameString () + " going active");
-					} else {
-						print ("ORDA on " + getNameString () + " already active");
-					}
-				}
-				// not the uppermost part
-				else {
-					// already active?
-					vessel.OnFlyByWire -= new FlightInputCallback (fly);
-					if (activeSystem == true) {
-						// go inactive and remove fly handler
-						activeSystem = false;
-
-						print ("ORDA on " + getNameString () + " going inactive");
-					} else {
-						print ("ORDA on " + getNameString () + " doing nothing");
-					}
-				}
-
-				// the vessel reference or the number of parts changed -> assume we (un)docked
-				// this will also trigger on regular staging - there might be a better way hm :/
-				// skip on first call
-				if (thisVessel != null || vessel.parts.Contains(targetDockingPort)) {
-					dockEvent = true;
-				}
-
-				thisVessel = vessel;
-				thisVesselParts = vessel.parts.Count;
-			}
+			
+			if (thisVessel != vessel || thisVessel == null) { OnVesselChange(vessel); }
 
 			// stop if we are not the active unit
 			if (!activeSystem) {
@@ -1207,26 +1229,11 @@ namespace ORDA
 				return;
 			}
 			else {
-				if (gnc.getCommand() != GNC.Command.OFF) {
+				if (!GameSettings.SAS_HOLD.GetKey() && gnc.curCommand != GNC.Command.OFF) {
 					part.vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
 				}
 			}
 
-			// activate rate dampening if detected docking/undocking
-			if (dockEvent) {
-				dockEvent = false;
-
-				// need to find a proper way to detect docking/undocking first
-				gnc.requestCommand (GNC.Command.OFF);
-				/*gnc.requestCommand (GNC.Command.RATE);
-				gnc.requestRateMode (GNC.RateMode.ZERO);
-				print ("reset to rate dampening");*/
-
-//				windowSizeInvalid = true;
-				targetVessel = null;
-				targetDockingPort = null;
-				vesselDockingPort = null;
-			}
 
 			// consume power
 			bool hasPower = true;
@@ -1242,14 +1249,14 @@ namespace ORDA
 			// turn off everything to annoy the player
 			if (!hasPower) {
 				gnc.requestCommand(GNC.Command.OFF);
-				currentPage = PageType.PAGE_TARGET;
-				targetVessel = null;
-				targetDockingPort = null;
-				vesselDockingPort = null;
-
-				if(FlightGlobals.fetch.VesselTarget != null) {
-					Util.unsetVesselTarget();
-				}
+//				currentPage = PageType.PAGE_TARGET;
+//				targetVessel = null;
+//				targetDockingPort = null;
+//				vesselDockingPort = null;
+//
+//				if(FlightGlobals.fetch.VesselTarget != null) {
+//					Util.unsetVesselTarget();
+//				}
 
 				windowSizeInvalid = true;
 				outOfPowerFlag = true;

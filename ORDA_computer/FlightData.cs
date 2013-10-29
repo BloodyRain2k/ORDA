@@ -25,6 +25,7 @@ namespace ORDA
 		public Vector3 targetRelVelocity = Vector3.zero;	// inertial frame
 		public Vector3 targetRelPositionShip = Vector3.zero;// ship frame
 		public Vector3 targetRelVelocityShip = Vector3.zero;// ship frame
+		public Vector3 nextNode = Vector3.zero;
 		public float altitudeASL = 0;
 		public float altitudeAGL = 0;
 		public float verticalSpeed = 0;
@@ -60,6 +61,9 @@ namespace ORDA
 			orbitUp = Util.reorder (vessel.orbit.pos, 132).normalized;
 			orbitVelocity = Util.reorder (vessel.orbit.vel, 132).normalized;
 			orbitNormal = -Vector3.Cross (orbitUp, orbitVelocity).normalized;
+			if (altitudeAGL > 5000) { // fix R+/- to be really R+/- instead of FromBody / ToBody above 5km so it can be used for landings
+				orbitUp = -Vector3.Cross(orbitVelocity, orbitNormal).normalized;
+			}
 			if (targetVessel != null) {
 				targetRelPosition = Util.reorder (targetVessel.orbit.pos - vessel.orbit.pos, 132);
 				targetRelVelocity = Util.reorder (targetVessel.orbit.vel - vessel.orbit.vel, 132);
@@ -70,6 +74,11 @@ namespace ORDA
 				targetRelVelocity = Vector3.zero;
 				targetRelPositionShip = Vector3.zero;
 				targetRelVelocityShip = Vector3.zero;
+			}
+			if (vessel.patchedConicSolver.maneuverNodes.Count > 0) {
+				nextNode = vessel.patchedConicSolver.maneuverNodes[0].GetBurnVector(vessel.orbit);
+			} else {
+				nextNode = Vector3.zero;
 			}
 			altitudeASL = (float)vessel.altitude;
 			altitudeAGL = (float)(vessel.altitude - vessel.terrainAltitude);
