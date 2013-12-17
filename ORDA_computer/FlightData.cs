@@ -55,7 +55,6 @@ namespace ORDA
 		{
 			// center of mass
 			CoM = vessel.findWorldCenterOfMass ();
-
 			// get vehicle state
 			angularVelocity = vessel.ReferenceTransform.InverseTransformDirection (vessel.rigidbody.angularVelocity);
 			orbitUp = Util.reorder (vessel.orbit.pos, 132).normalized;
@@ -75,7 +74,7 @@ namespace ORDA
 				targetRelPositionShip = Vector3.zero;
 				targetRelVelocityShip = Vector3.zero;
 			}
-			if (vessel.patchedConicSolver.maneuverNodes.Count > 0) {
+			if (vessel == FlightGlobals.ActiveVessel && vessel.patchedConicSolver.maneuverNodes.Count > 0) {
 				nextNode = vessel.patchedConicSolver.maneuverNodes[0].GetBurnVector(vessel.orbit);
 			} else {
 				nextNode = Vector3.zero;
