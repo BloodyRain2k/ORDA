@@ -49,7 +49,6 @@
     <Compile Include="BetterConfigNode.cs" />
     <Compile Include="ORDA_computer.cs" />
     <Compile Include="ORDA_computer\Bus.cs" />
-    <Compile Include="ORDA_computer\Controller.cs" />
     <Compile Include="ORDA_computer\FlightData.cs" />
     <Compile Include="ORDA_computer\GNC.cs" />
     <Compile Include="ORDA_computer\PID.cs" />
@@ -93,6 +92,9 @@
       <HintPath>..\DLLs\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="orda.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.Targets" />
 </Project>

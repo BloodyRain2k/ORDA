@@ -86,6 +86,9 @@ namespace ORDA
 		bool showDockingArrow = true;
 		string configFile = IOUtils.GetFilePathFor(typeof(ORDA_computer), "ORDA_computer.cfg");
 
+		ApplicationLauncherButton button;
+		Texture2D texButton = new Texture2D(38, 38);
+		
 //		[KSPField(isPersistant = false, guiActive = true, guiName = "Status")]
 //        public string Status;
 
@@ -927,9 +930,9 @@ namespace ORDA
 
 				// magic button
 				if (windowIsMinimized) {
-					if (GUI.Button (new Rect (Screen.width - 50, 0, 50, 25), "ORDA")) {
-						windowIsMinimized = false;
-					}
+//					if (GUI.Button (new Rect (Screen.width - 50, 0, 50, 25), "ORDA")) {
+//						windowIsMinimized = false;
+//					}
 				}
 
 				// fix pos / size
@@ -1054,10 +1057,18 @@ namespace ORDA
 		{
 		}
 
+		public void Toggle() {
+			windowIsMinimized = !windowIsMinimized;
+		}
+		
 		public override void OnStart (StartState state)
 		{
 			if (state == StartState.Editor) return;
 			part.force_activate ();
+			
+			var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("ORDA.orda.png");
+			texButton.LoadImage(new System.IO.BinaryReader(stream).ReadBytes((int)stream.Length)); // embedded resource loading is stupid
+			button = ApplicationLauncher.Instance.AddModApplication(Toggle, Toggle, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, texButton);
 
 			// create objects
 			visualHelper = new VisualHelper (this.vessel.transform);
@@ -1207,8 +1218,8 @@ namespace ORDA
 			}
 			
 			if (showDockingArrow && !windowIsMinimized && currentPage == PageType.PAGE_TARGET && targetDockingPort != null) {
-				var portDirection = targetDockingPort.transform.up;
-				if (targetDockingPort.name == "dockingPortLateral") { portDirection = -targetDockingPort.transform.forward; }
+//				var portDirection = targetDockingPort.FindModulesImplementing<ModuleDockingNode>()[0].controlTransform.rotation.eulerAngles.normalized;
+				var portDirection = targetDockingPort.FindModulesImplementing<ModuleDockingNode>()[0].controlTransform.up;
 				arrow.SetPosition(0, targetDockingPort.transform.position);
 				arrow.SetPosition(1, targetDockingPort.transform.position + portDirection * 20f);
 			} else {

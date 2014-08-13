@@ -783,6 +783,27 @@ namespace ORDA
 
 		private Quaternion getDockingPortRotation(Part dockPart)
 		{
+			var node = dockPart.FindModulesImplementing<ModuleDockingNode>()[0];
+//			Debug.Log("Transforms for " + dockPart.partInfo.name
+//					+ "\n" + node.controlTransform.localRotation.ToString() + " node.controlTransform.localRotation"
+//			        + "\n" + node.nodeTransform.localRotation.ToString() + " node.nodeTransform.localRotation"
+//			        + "\n" + node.transform.localRotation.ToString() + " node.transform.localRotation"
+//					+ "\n" + Quaternion.Euler(node.controlTransform.up).ToString() + " Quaternion.Euler(node.controlTransform.up)"
+//			        + "\n" + dockPart.transform.localRotation.ToString() + " dockPart.transform.localRotation"
+//			        + "\n" + Quaternion.AngleAxis(-90, new Vector3(1, 0, 0)).ToString() + " Quaternion.AngleAxis(-90, new Vector3(1, 0, 0))"
+//			        + "\n" + Quaternion.identity.ToString() + " Quaternion.identity"
+//			       );
+//			return node.controlTransform.localRotation;
+			
+//			Debug.Log(Vector3.Angle(dockPart.transform.up, node.controlTransform.up)
+//					+ "\n" + Vector3.Cross(dockPart.transform.up, node.controlTransform.up)
+//					+ "\n" + Quaternion.AngleAxis(Mathf.Round(Vector3.Angle(dockPart.transform.up, node.controlTransform.up)),
+//			                            Vector3.Cross(dockPart.transform.up, node.controlTransform.up))
+//			);
+//			return Quaternion.RotateTowards(dockPart.transform.rotation, node.controlTransform.rotation, 90);
+//			return Quaternion.AngleAxis(Mathf.Round(Vector3.Angle(dockPart.transform.up, node.controlTransform.up)), dockPart.transform.up);
+//			                            Vector3.Cross(dockPart.transform.up, node.controlTransform.up));
+			
 			if (dockPart.name == "dockingPortLateral") {
 				return Quaternion.AngleAxis(-90, new Vector3(1, 0, 0));
 			} else {
