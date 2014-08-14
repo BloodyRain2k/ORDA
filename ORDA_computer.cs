@@ -87,7 +87,7 @@ namespace ORDA
 		string configFile = IOUtils.GetFilePathFor(typeof(ORDA_computer), "ORDA_computer.cfg");
 
 		ApplicationLauncherButton button;
-		Texture2D texButton = new Texture2D(38, 38);
+		Texture2D texButton;
 		
 //		[KSPField(isPersistant = false, guiActive = true, guiName = "Status")]
 //        public string Status;
@@ -1061,14 +1061,27 @@ namespace ORDA
 			windowIsMinimized = !windowIsMinimized;
 		}
 		
+		public void RemoveButton()
+		{
+			if (button != null) {
+				ApplicationLauncher.Instance.RemoveModApplication(button);
+				button = null;
+			}
+		}
+		
+		public void OnDestroy()
+		{
+			RemoveButton();
+		}
+		
 		public override void OnStart (StartState state)
 		{
 			if (state == StartState.Editor) return;
 			part.force_activate ();
 			
 			var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("ORDA.orda.png");
+			texButton = new Texture2D(38, 38);
 			texButton.LoadImage(new System.IO.BinaryReader(stream).ReadBytes((int)stream.Length)); // embedded resource loading is stupid
-			button = ApplicationLauncher.Instance.AddModApplication(Toggle, Toggle, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, texButton);
 
 			// create objects
 			visualHelper = new VisualHelper (this.vessel.transform);
@@ -1178,10 +1191,19 @@ namespace ORDA
 		{
 			float dt = Time.deltaTime;
 
-			// stop if we are not the active unit
-			if (!activeSystem)
-				return;
+			if (vessel != FlightGlobals.ActiveVessel) {
+				RemoveButton();
+			}
 
+			// stop if we are not the active unit
+			if (!activeSystem) {
+				return;
+			}
+			
+			if (button == null && texButton != null && vessel == FlightGlobals.ActiveVessel) {
+				button = ApplicationLauncher.Instance.AddModApplication(Toggle, Toggle, null, null, null, null, ApplicationLauncher.AppScenes.FLIGHT, texButton);
+			}
+			
 			// stock ksp target selection
 			if (FlightGlobals.fetch.VesselTarget is ModuleDockingNode) {
 				ModuleDockingNode mdn = (ModuleDockingNode)FlightGlobals.fetch.VesselTarget;
