@@ -224,21 +224,21 @@ namespace ORDA
 				// remove old highlights
 				if(highlightedVesselDockingPort != vesselDockingPort && highlightedVesselDockingPort != null) {
 					highlightedVesselDockingPort.SetHighlightDefault();
-					highlightedVesselDockingPort.SetHighlight(false);
+					highlightedVesselDockingPort.SetHighlight(false, false);
 				}
 				if(highlightedTargetDockingPort != targetDockingPort && highlightedTargetDockingPort != null) {
 					highlightedTargetDockingPort.SetHighlightDefault();
-					highlightedTargetDockingPort.SetHighlight(false);
+					highlightedTargetDockingPort.SetHighlight(false, false);
 				}
 
 				// highlight selected ports
 				if(vesselDockingPort != null) {
 					vesselDockingPort.SetHighlightColor(Color.green);
-					vesselDockingPort.SetHighlight(true);
+					vesselDockingPort.SetHighlight(true, false);
 				}
 				if(targetDockingPort != null) {
 					targetDockingPort.SetHighlightColor(Color.green);
-					targetDockingPort.SetHighlight(true);
+					targetDockingPort.SetHighlight(true, false);
 				}
 				highlightedVesselDockingPort = vesselDockingPort;
 				highlightedTargetDockingPort = targetDockingPort;
@@ -247,12 +247,12 @@ namespace ORDA
 				// remove highlights
 				if(highlightedVesselDockingPort != null) {
 					highlightedVesselDockingPort.SetHighlightDefault();
-					highlightedVesselDockingPort.SetHighlight(false);
+					highlightedVesselDockingPort.SetHighlight(false, false);
 					highlightedVesselDockingPort = null;
 				}
 				if(highlightedTargetDockingPort != null) {
 					highlightedTargetDockingPort.SetHighlightDefault();
-					highlightedTargetDockingPort.SetHighlight(false);
+					highlightedTargetDockingPort.SetHighlight(false, false);
 					highlightedTargetDockingPort = null;
 				}
 			}
@@ -975,12 +975,12 @@ namespace ORDA
 				// remove highlights
 				if (highlightedVesselDockingPort != null) {
 					highlightedVesselDockingPort.SetHighlightDefault();
-					highlightedVesselDockingPort.SetHighlight(false);
+					highlightedVesselDockingPort.SetHighlight(false, false);
 					highlightedVesselDockingPort = null;
 				}
 				if (highlightedTargetDockingPort != null) {
 					highlightedTargetDockingPort.SetHighlightDefault();
-					highlightedTargetDockingPort.SetHighlight(false);
+					highlightedTargetDockingPort.SetHighlight(false, false);
 					highlightedTargetDockingPort = null;
 				}
 			}
@@ -1197,6 +1197,7 @@ namespace ORDA
 
 			// stop if we are not the active unit
 			if (!activeSystem) {
+				RemoveButton();
 				return;
 			}
 			
