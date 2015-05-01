@@ -885,11 +885,11 @@ namespace ORDA
 			if (landingStatsToggle) {
 				GUILayout.Label ("Mass: " + Util.formatValue (flightData.mass, "t"));
 
-				if(vessel.mainBody.atmosphere) {
-					GUILayout.Label ("Atmosphere: " + Util.formatValue (vessel.mainBody.maxAtmosphereAltitude, "m"));
-				} else {
-					GUILayout.Label ("No Atmosphere");
-				}
+//				if(vessel.mainBody.atmosphere) {
+//					GUILayout.Label ("Atmosphere: " + Util.formatValue (vessel.mainBody.maxAtmosphereAltitude, "m"));
+//				} else {
+//					GUILayout.Label ("No Atmosphere");
+//				}
 			}
 
 			// simulate impact
